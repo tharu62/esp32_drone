@@ -1,1 +1,10 @@
-build
+build/*
+.settings/
+.clang-format
+.clangd
+.cproject
+.project
+dependencies.lock
+pytest_drone.py
+sdkconfig
+sdkconfig.ci
