@@ -24,7 +24,7 @@ static esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev_handle, uint8
 }
 
 /**
- * @brief Write a byte to a MPU6050 sensor register
+ * @brief Write 1 byte to a MPU6050 sensor register
  */
 static esp_err_t mpu6050_register_write_byte(i2c_master_dev_handle_t dev_handle, uint8_t reg_addr, uint8_t data)
 {
@@ -56,7 +56,12 @@ static void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_
 }
 
 /**
- * @brief Setup function for MPU6050
+ * @brief Setup function for MPU6050 by :
+ *       1. Waking up the sensor
+ *       2. Reading and logging the WHO_AM_I register
+ *       3. Setting the sample rate
+ *       4. Configuring the accelerometer range (±8g)
+ * 
  */
 static void mpu6050_setup(i2c_master_dev_handle_t dev_handle, uint8_t *data)
 {
