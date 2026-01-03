@@ -1,43 +1,94 @@
 #include "kalman_filter.h"
 
-#define STANDARD_DEV_ACCEL_NOISE_SQRD 4.0f*4.0f  // Standard deviation squared of acceleration noise (deg)
-#define STANDARD_DEV_GYRO_NOISE_SQRD 3.0f*3.0f   // Standard deviation squared of gyro
+// Measurement noise (deg²)
+#define STANDARD_DEV_ACCEL_NOISE_SQRD (10.0f * 10.0f)
 
-float k_uncertainty_roll = 2.0f*2.0f;   // Initial estimation uncertainty for roll
-float k_uncertainty_pitch = 2.0f*2.0f;  // Initial estimation uncertainty for pitch
+// Process noise
+#define Q_ANGLE 0.001f
+#define Q_BIAS  0.003f
 
-float k_gain_roll = 0.0f;   // Kalman gain for roll
-float k_gain_pitch = 0.0f;  // Kalman gain for pitch
+// ===== Roll Kalman state =====
+static float roll_bias = 0.0f;
+static float P_roll[2][2] = {
+    {1.0f, 0.0f},
+    {0.0f, 1.0f}
+};
 
-void reset_kalman_filter() 
+// ===== Pitch Kalman state =====
+static float pitch_bias = 0.0f;
+static float P_pitch[2][2] = {
+    {1.0f, 0.0f},
+    {0.0f, 1.0f}
+};
+
+void reset_kalman_filter(void)
 {
-    k_uncertainty_roll = 2.0f * 2.0f;
-    k_uncertainty_pitch = 2.0f * 2.0f;
+    roll_bias  = 0.0f;
+    pitch_bias = 0.0f;
 
-    k_gain_roll = 0.0f;
-    k_gain_pitch = 0.0f;
+    P_roll[0][0] = P_pitch[0][0] = 1.0f;
+    P_roll[0][1] = P_pitch[0][1] = 0.0f;
+    P_roll[1][0] = P_pitch[1][0] = 0.0f;
+    P_roll[1][1] = P_pitch[1][1] = 1.0f;
 }
 
-void kalman_filter(State *state, float dt) 
+void kalman_filter(State *state, float dt)
 {
-    // Predict roll angle by integrating angular velocity
-    state->k_angle[0] += state->angular_velocity[0] * dt;  
-    state->k_angle[1] += state->angular_velocity[1] * dt;  
+    /* ===================== ROLL ===================== */
 
-    // Update uncertainty from rotation integration
-    
-    k_uncertainty_roll += dt * dt * STANDARD_DEV_GYRO_NOISE_SQRD; 
-    k_uncertainty_pitch += dt * dt * STANDARD_DEV_GYRO_NOISE_SQRD;
+    // ---- Prediction ----
+    state->k_angle[0] += (state->angular_velocity[0] - roll_bias) * dt;
 
-    // Calculate Kalman gain for roll and pitch
-    k_gain_roll = k_uncertainty_roll / (1.0f*k_uncertainty_roll + STANDARD_DEV_ACCEL_NOISE_SQRD);          
-    k_gain_pitch = k_uncertainty_pitch / (1.0f*k_uncertainty_pitch + STANDARD_DEV_ACCEL_NOISE_SQRD);
+    P_roll[0][0] += dt * (dt * P_roll[1][1] - P_roll[0][1] - P_roll[1][0] + Q_ANGLE);
+    P_roll[0][1] -= dt * P_roll[1][1];
+    P_roll[1][0] -= dt * P_roll[1][1];
+    P_roll[1][1] += Q_BIAS * dt;
 
-    // Update roll and pitch angle with measurement
-    state->k_angle[0] += k_gain_roll * (state->m_angle[0] - state->k_angle[0]);       
-    state->k_angle[1] += k_gain_pitch * (state->m_angle[1] - state->k_angle[1]);      
+    // ---- Update ----
+    float y_roll = state->m_angle[0] - state->k_angle[0];
+    float S_roll = P_roll[0][0] + STANDARD_DEV_ACCEL_NOISE_SQRD;
 
-    // Update uncertainty for roll and pitch
-    k_uncertainty_roll *= (1 - k_gain_roll);                
-    k_uncertainty_pitch *= (1 - k_gain_pitch);              
+    float K_roll_0 = P_roll[0][0] / S_roll;
+    float K_roll_1 = P_roll[1][0] / S_roll;
+
+    state->k_angle[0] += K_roll_0 * y_roll;
+    roll_bias         += K_roll_1 * y_roll;
+
+    float P00_temp = P_roll[0][0];
+    float P01_temp = P_roll[0][1];
+
+    P_roll[0][0] -= K_roll_0 * P00_temp;
+    P_roll[0][1] -= K_roll_0 * P01_temp;
+    P_roll[1][0] -= K_roll_1 * P00_temp;
+    P_roll[1][1] -= K_roll_1 * P01_temp;
+
+    /* ===================== PITCH ===================== */
+
+    state->k_angle[1] += (state->angular_velocity[1] - pitch_bias) * dt;
+
+    P_pitch[0][0] += dt * (dt * P_pitch[1][1] - P_pitch[0][1] - P_pitch[1][0] + Q_ANGLE);
+    P_pitch[0][1] -= dt * P_pitch[1][1];
+    P_pitch[1][0] -= dt * P_pitch[1][1];
+    P_pitch[1][1] += Q_BIAS * dt;
+
+    float y_pitch = state->m_angle[1] - state->k_angle[1];
+    float S_pitch = P_pitch[0][0] + STANDARD_DEV_ACCEL_NOISE_SQRD;
+
+    float K_pitch_0 = P_pitch[0][0] / S_pitch;
+    float K_pitch_1 = P_pitch[1][0] / S_pitch;
+
+    state->k_angle[1] += K_pitch_0 * y_pitch;
+    pitch_bias        += K_pitch_1 * y_pitch;
+
+    P00_temp = P_pitch[0][0];
+    P01_temp = P_pitch[0][1];
+
+    P_pitch[0][0] -= K_pitch_0 * P00_temp;
+    P_pitch[0][1] -= K_pitch_0 * P01_temp;
+    P_pitch[1][0] -= K_pitch_1 * P00_temp;
+    P_pitch[1][1] -= K_pitch_1 * P01_temp;
+
+    /* ===================== YAW (gyro only) ===================== */
+
+    state->k_angle[2] += state->angular_velocity[2] * dt;
 }

@@ -8,6 +8,7 @@ typedef struct {
     float m_angle[3];           // Measured angles from accelerometer: roll, pitch, yaw 
     float k_angle[3];           // Kalman filtered angles: roll, pitch, yaw
     float angular_velocity[3];  // wx, wy, wz
+    float angular_acceleration[3]; // alpha_x, alpha_y, alpha_z
 } State;
 
 void init_state(State *state);

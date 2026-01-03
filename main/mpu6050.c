@@ -15,10 +15,9 @@
 #define MPU6050_ACCELEROMETER_DATA_REG_ADDR 0x3B               /*!< Register address where accelerometer data starts */
 #define MPU6050_GYROSCOPE_DATA_REG_ADDR     0x43               /*!< Register address where gyroscope data starts */
 
-float ROLL_CALIBRATION_OFFSET   = 0.0f;
-float PITCH_CALIBRATION_OFFSET  = 0.0f;
-float YAW_CALIBRATION_OFFSET    = 0.0f;
-
+float ROLL_GYRO_CALIBRATION_OFFSET   = 0.0f;
+float PITCH_GYRO_CALIBRATION_OFFSET  = 0.0f;
+float YAW_GYRO_CALIBRATION_OFFSET    = 0.0f;
 
 esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev_handle, uint8_t reg_addr, uint8_t *data, size_t len)
 {
@@ -30,7 +29,6 @@ esp_err_t mpu6050_register_write_byte(i2c_master_dev_handle_t dev_handle, uint8_
     uint8_t write_buf[2] = {reg_addr, data};
     return i2c_master_transmit(dev_handle, write_buf, sizeof(write_buf), I2C_MASTER_TIMEOUT_MS);
 }
-
 
 void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_t *dev_handle)
 {
@@ -52,7 +50,6 @@ void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_
     ESP_ERROR_CHECK(i2c_master_bus_add_device(*bus_handle, &dev_config, dev_handle));
 }
 
-
 void mpu6050_calibration(i2c_master_dev_handle_t dev_handle, uint8_t *data)
 {
     for(int i=0; i<2000; i++){
@@ -62,18 +59,16 @@ void mpu6050_calibration(i2c_master_dev_handle_t dev_handle, uint8_t *data)
         int16_t GYRO_RAWX = (data[0] << 8) | data[1];
         int16_t GYRO_RAWY = (data[2] << 8) | data[3];
         int16_t GYRO_RAWZ = (data[4] << 8) | data[5];
-        ROLL_CALIBRATION_OFFSET     += (float) GYRO_RAWX / 131.0f;
-        PITCH_CALIBRATION_OFFSET    += (float) GYRO_RAWY / 131.0f;
-        YAW_CALIBRATION_OFFSET      += (float) GYRO_RAWZ / 131.0f;
+        ROLL_GYRO_CALIBRATION_OFFSET     += (float) GYRO_RAWX / 131.0f;
+        PITCH_GYRO_CALIBRATION_OFFSET    += (float) GYRO_RAWY / 131.0f;
+        YAW_GYRO_CALIBRATION_OFFSET      += (float) GYRO_RAWZ / 131.0f;
 
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
-    ROLL_CALIBRATION_OFFSET     /= 2000.0f;
-    PITCH_CALIBRATION_OFFSET    /= 2000.0f;  
-    YAW_CALIBRATION_OFFSET      /= 2000.0f;
+    ROLL_GYRO_CALIBRATION_OFFSET     /= 2000.0f;
+    PITCH_GYRO_CALIBRATION_OFFSET    /= 2000.0f;  
+    YAW_GYRO_CALIBRATION_OFFSET      /= 2000.0f;
 }
-
-
 
 void mpu6050_setup(i2c_master_dev_handle_t dev_handle, uint8_t *data)
 {
@@ -87,42 +82,72 @@ void mpu6050_setup(i2c_master_dev_handle_t dev_handle, uint8_t *data)
     // Set sample rate to 1kHz/(1+7) = 125Hz
     ESP_ERROR_CHECK(mpu6050_register_write_byte(dev_handle, 0x19, 0x07)); 
 
-    // Set accelerometer configuration to +/- 8g
-    ESP_ERROR_CHECK(mpu6050_register_write_byte(dev_handle, 0x1C, 0x10)); 
+    // Set accelerometer configuration to +/- 2g
+    ESP_ERROR_CHECK(mpu6050_register_write_byte(dev_handle, 0x1C, 0x00));
+    // Set gyroscope configuration to +/- 250 degrees/second 
+    ESP_ERROR_CHECK(mpu6050_register_write_byte(dev_handle, 0x1B, 0x00));
 }
 
-void mpu6050_get_angle(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, float *angle_x, float *angle_y)
+void mpu6050_get_angle(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, State *state)
 {
-    // ESP_ERROR_CHECK(mpu6050_register_read(dev_handle, MPU6050_ACCELEROMETER_DATA_REG_ADDR, data, 6));
+    ESP_ERROR_CHECK(mpu6050_register_read(dev_handle, MPU6050_ACCELEROMETER_DATA_REG_ADDR, data, 6));
     while (mpu6050_register_read(dev_handle, MPU6050_ACCELEROMETER_DATA_REG_ADDR, data, 6) != ESP_OK) {
         ESP_LOGI("mpu6050", "Failed to read accelerometer data, retrying...");
         i2c_master_bus_reset(bus_handle);
-        vTaskDelay(10 / portTICK_PERIOD_MS); // Wait and retry after 10 millisecond if read fails
+        vTaskDelay(1 / portTICK_PERIOD_MS); // Wait and retry after 1 millisecond if read fails
     }
-    int16_t RAWX = (data[0]<<8) | data[1];
-    int16_t RAWY = (data[2]<<8) | data[3];
-    int16_t RAWZ = (data[4]<<8) | data[5];
-    // UPDATED FOR ±8g RANGE  → 4096 LSB/g
-    float xg = (float) RAWX / 4096.0f;
-    float yg = (float) RAWY / 4096.0f;
-    float zg = (float) RAWZ / 4096.0f;
+    // if (mpu6050_register_read(dev_handle, MPU6050_ACCELEROMETER_DATA_REG_ADDR, data, 6) != ESP_OK) {
+    //     return;
+    // }
 
-    *angle_x = atan2f(yg, sqrtf(xg * xg + zg * zg)) * 180.0f / M_PI;
-    *angle_y = atan2f(-xg, sqrtf(yg * yg + zg * zg)) * 180.0f / M_PI;
+    int16_t ACCEL_RAW[3] = {0};
+    ACCEL_RAW[0] = (data[0] << 8) | data[1];
+    ACCEL_RAW[1] = (data[2] << 8) | data[3];
+    ACCEL_RAW[2] = (data[4] << 8) | data[5];
+    
+    // UPDATED FOR ±2g RANGE  → 16384 LSB/g
+    float xg = (float) ACCEL_RAW[0] / 16384.0f;
+    float yg = (float) ACCEL_RAW[1] / 16384.0f;
+    float zg = (float) ACCEL_RAW[2] / 16384.0f;
+
+    // if (sqrtf(xg * xg + yg * yg + zg * zg) < 0.5f || sqrtf(xg * xg + yg * yg + zg * zg) > 2.0f) {
+    //     // Invalid accelerometer reading, likely due to free fall or extreme motion
+    //     return;
+    // }
+    // Reading higher than 1.2g indicates external acceleration, apply simple correction based on percentage and low-pass filter
+    if (sqrtf(xg * xg + yg * yg + zg * zg) > 1.0f) {
+        float modulus = sqrtf(xg * xg + yg * yg + zg * zg);
+        float daccel = modulus - 1.0f;
+        xg = 0.97f * (xg - xg * daccel * 100.f / modulus) + 0.03f * xg;
+        yg = 0.97f * (yg - yg * daccel * 100.f / modulus) + 0.03f * yg;
+    }
+
+    state->m_angle[0] = atan2f(yg, sqrtf(xg * xg + zg * zg)) * 180.0f / M_PI;
+    state->m_angle[1] = atan2f(-xg, sqrtf(yg * yg + zg * zg)) * 180.0f / M_PI;
 }
 
-void mpu6050_get_rotation_rate(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, float *gyroX, float *gyroY, float *gyroZ)
+void mpu6050_get_rotation_rate(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, State *state, float dt)
 {
     // ESP_ERROR_CHECK(mpu6050_register_read(dev_handle, MPU6050_GYROSCOPE_DATA_REG_ADDR, data, 6));
     while (mpu6050_register_read(dev_handle, MPU6050_GYROSCOPE_DATA_REG_ADDR, data, 6) != ESP_OK) {
         ESP_LOGI("mpu6050", "Failed to read gyroscope data, retrying...");
         i2c_master_bus_reset(bus_handle);
-        vTaskDelay(10 / portTICK_PERIOD_MS); // Wait and retry after 10 millisecond if read fails
+        vTaskDelay(1 / portTICK_PERIOD_MS); // Wait and retry after 1 millisecond if read fails
     }
-    int16_t GYRO_RAWX = (data[0] << 8) | data[1];
-    int16_t GYRO_RAWY = (data[2] << 8) | data[3];
-    int16_t GYRO_RAWZ = (data[4] << 8) | data[5];
-    *gyroX = (float) GYRO_RAWX / 131.0f - ROLL_CALIBRATION_OFFSET;
-    *gyroY = (float) GYRO_RAWY / 131.0f - PITCH_CALIBRATION_OFFSET;
-    *gyroZ = (float) GYRO_RAWZ / 131.0f - YAW_CALIBRATION_OFFSET;
+    // if (mpu6050_register_read(dev_handle, MPU6050_GYROSCOPE_DATA_REG_ADDR, data, 6) != ESP_OK) {
+    //     return;
+    // }
+
+    int16_t GYRO_RAW[3] = {0};
+    GYRO_RAW[0] = (data[0] << 8) | data[1];
+    GYRO_RAW[1] = (data[2] << 8) | data[3];
+    GYRO_RAW[2] = (data[4] << 8) | data[5];
+
+    state->angular_acceleration[0] = (float) ((GYRO_RAW[0] / 131.f - ROLL_GYRO_CALIBRATION_OFFSET)  - state->angular_velocity[0]) / dt; 
+    state->angular_acceleration[1] = (float) ((GYRO_RAW[1] / 131.f - PITCH_GYRO_CALIBRATION_OFFSET) - state->angular_velocity[1]) / dt; 
+    state->angular_acceleration[2] = (float) ((GYRO_RAW[2] / 131.f - YAW_GYRO_CALIBRATION_OFFSET)   - state->angular_velocity[2]) / dt; 
+
+    state->angular_velocity[0] = (float) GYRO_RAW[0] / 131.f - ROLL_GYRO_CALIBRATION_OFFSET;
+    state->angular_velocity[1] = (float) GYRO_RAW[1] / 131.f - PITCH_GYRO_CALIBRATION_OFFSET;
+    state->angular_velocity[2] = (float) GYRO_RAW[2] / 131.f - YAW_GYRO_CALIBRATION_OFFSET;
 }
