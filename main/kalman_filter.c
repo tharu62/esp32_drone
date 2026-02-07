@@ -64,6 +64,7 @@ void kalman_filter(State *state, float dt)
 
     /* ===================== PITCH ===================== */
 
+    // ---- Prediction ----
     state->k_angle[1] += (state->angular_velocity[1] - pitch_bias) * dt;
 
     P_pitch[0][0] += dt * (dt * P_pitch[1][1] - P_pitch[0][1] - P_pitch[1][0] + Q_ANGLE);
@@ -71,6 +72,7 @@ void kalman_filter(State *state, float dt)
     P_pitch[1][0] -= dt * P_pitch[1][1];
     P_pitch[1][1] += Q_BIAS * dt;
 
+    // ---- Update ----
     float y_pitch = state->m_angle[1] - state->k_angle[1];
     float S_pitch = P_pitch[0][0] + STANDARD_DEV_ACCEL_NOISE_SQRD;
 
@@ -87,8 +89,4 @@ void kalman_filter(State *state, float dt)
     P_pitch[0][1] -= K_pitch_0 * P01_temp;
     P_pitch[1][0] -= K_pitch_1 * P00_temp;
     P_pitch[1][1] -= K_pitch_1 * P01_temp;
-
-    /* ===================== YAW (gyro only) ===================== */
-
-    state->k_angle[2] += state->angular_velocity[2] * dt;
 }

@@ -11,6 +11,6 @@ void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
 
 void init_espnow();
 
-void get_control_inputs(float *out_throttle, float *out_roll, float *out_pitch, float *out_yaw);
+void get_control_inputs(float *out_throttle, float *out_roll, float *out_pitch);
 
 #endif // INPUT_RECEIVER_H

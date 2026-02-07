@@ -143,10 +143,6 @@ void mpu6050_get_rotation_rate(i2c_master_dev_handle_t dev_handle, i2c_master_bu
     GYRO_RAW[1] = (data[2] << 8) | data[3];
     GYRO_RAW[2] = (data[4] << 8) | data[5];
 
-    state->angular_acceleration[0] = (float) ((GYRO_RAW[0] / 131.f - ROLL_GYRO_CALIBRATION_OFFSET)  - state->angular_velocity[0]) / dt; 
-    state->angular_acceleration[1] = (float) ((GYRO_RAW[1] / 131.f - PITCH_GYRO_CALIBRATION_OFFSET) - state->angular_velocity[1]) / dt; 
-    state->angular_acceleration[2] = (float) ((GYRO_RAW[2] / 131.f - YAW_GYRO_CALIBRATION_OFFSET)   - state->angular_velocity[2]) / dt; 
-
     state->angular_velocity[0] = (float) GYRO_RAW[0] / 131.f - ROLL_GYRO_CALIBRATION_OFFSET;
     state->angular_velocity[1] = (float) GYRO_RAW[1] / 131.f - PITCH_GYRO_CALIBRATION_OFFSET;
     state->angular_velocity[2] = (float) GYRO_RAW[2] / 131.f - YAW_GYRO_CALIBRATION_OFFSET;

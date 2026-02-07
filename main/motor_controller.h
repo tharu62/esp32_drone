@@ -14,7 +14,7 @@
 // Initialize the motor controller variables.
 void motor_controller_init(void);
 
-void motor_set_speed_percent(float percent, int motor_index);
+void motor_set_speed_percent(void);
 
 /**
  * @brief Control motors based on input commands

@@ -20,12 +20,13 @@
 #include "state.h"
 #include "mpu6050.h"
 #include "angle_controller.h"
-#include "rotation_rate_controller.h"
 #include "motor_controller.h"
 #include "kalman_filter.h"
 #include "input_receiver.h"
 
 static const char *TAG = "drone";
+
+#define DEBUG // Comment this out to disable debug features (MPU6050, PID, Kalman filter)
 
 /**
  * @brief Main application
@@ -39,55 +40,51 @@ void app_main(void)
     ESP_LOGI(TAG, "I2C initialized successfully");
 
     State drone_state;
-    init_state(&drone_state);
+    init_state(&drone_state); // Zeroes roll and pitch angles
 
+#ifdef DEBUG
     mpu6050_setup(dev_handle, data);
-    mpu6050_calibration(dev_handle, data);
-
+    mpu6050_calibration(dev_handle, data); // Calibrate the MPU6050 to get accurate readings
     angle_controller_init();
-    rotation_rate_controller_init();
     motor_controller_init();
     reset_kalman_filter();
-
+#endif
+    
     init_espnow();
 
-    float desired_angles[3] = {0.0f, 0.0f, 0.0f};           // Placeholder for desired angles (roll, pitch, yaw)
-    float throttle = 100.0f;                                // Placeholder for throttle input
-    float desired_rotation_rate[3] = {0.0f, 0.0f, 0.0f};    // Placeholder for desired rotation rates (roll rate, pitch rate, yaw rate)
-    float rotation_rate_output[3] = {0.0f, 0.0f, 0.0f};     // Placeholder for rotation rate controller outputs
+    float desired_angles[2] = {0.0f, 0.0f};                 // Angles given by user (roll, pitch)
+    float throttle = 100.0f;                                // Throttle input from user (0-100%)
+    float pid_angle_error[2] = {0.0f, 0.0f};                // Placeholder for angle controller outputs
 
-    float dt = 0.005f; // Time step for control loop (5 ms)
+    float dt = 0.01f; // Time step for control loop (5 ms)
     float t_start = 0.0f;
     float t_end = 0.0f;
     float elapsed = 0.0f;
     // Main control loop
     while (true) {
-
         t_start = esp_timer_get_time() / 1000.0f; // Get current time in milliseconds
-        
-        // Read Input from user (desired angles)
-        // @todo: Implement user input reading here
-        get_control_inputs(&throttle, &desired_angles[0], &desired_angles[1], &desired_angles[2]);
 
-        // ESP_LOGI("", "%f,%f,%f", drone_state.k_angle[0], drone_state.k_angle[1], drone_state.k_angle[2]);
-        printf("%f,%f,%f\n", drone_state.k_angle[0], drone_state.k_angle[1], drone_state.k_angle[2]);
+        // Read Input from user (desired angles and throttle)
+        get_control_inputs(&throttle, &desired_angles[0], &desired_angles[1]);
 
+        if (throttle < 0.0f) break; // Exit loop if throttle is negative (used as a signal to stop)
+
+#ifndef DEBUG        
+        printf("%f,%f,%f\n", drone_state.k_angle[0], drone_state.k_angle[1], throttle);
+#endif
+
+#ifdef DEBUG        
         // Run angle controller pid to get desired rotation rates
-        angle_pid_controller(desired_angles, &drone_state, dt, desired_rotation_rate);
+        angle_pid_controller(desired_angles, &drone_state, dt, pid_angle_error);
 
-        // Run rotation rate controller pid to get motor commands
-        rotation_rate_pid_controller(desired_rotation_rate, &drone_state, dt, rotation_rate_output);
+        // Update motor speeds by pwm signals (temporarely disabled for testing)
+        motor_controller(throttle, pid_angle_error);
 
-        // Update motor speeds by pwm signals
-        motor_controller(throttle, rotation_rate_output);
-
-        // Read sensor data
+        // Read sensor data & Run Kalman filter to update state estimation
         mpu6050_get_angle(dev_handle, bus_handle, data,&drone_state);
         mpu6050_get_rotation_rate(dev_handle, bus_handle, data, &drone_state, dt);
-
-        // Run Kalman filter to update state estimation
         kalman_filter(&drone_state, dt); 
-
+#endif
         // Make sure to run at fixed time interval
         t_end = esp_timer_get_time() / 1000.0f; // Get current time in milliseconds
         elapsed = t_end - t_start;
@@ -101,6 +98,7 @@ void app_main(void)
     ESP_ERROR_CHECK(i2c_master_bus_rm_device(dev_handle));
     ESP_ERROR_CHECK(i2c_del_master_bus(bus_handle));
     ESP_LOGI(TAG, "I2C de-initialized successfully");
+    ESP_LOGI(TAG, "Drone OFF.");
 }
 
 
