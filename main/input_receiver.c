@@ -28,7 +28,7 @@ typedef struct __attribute__((packed))
 // Callback for received ESP-NOW packets
 void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int data_len)
 {
-    if (data_len != sizeof(control_packet_t)) return;
+    // if (data_len != sizeof(control_packet_t)) return;
 
     control_packet_t pkt;
     memcpy(&pkt, data, sizeof(pkt));
@@ -44,6 +44,7 @@ void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     //     roll,
     //     pitch
     // );
+
 }
 
 void init_espnow(void) 

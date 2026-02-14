@@ -26,7 +26,7 @@ void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_
 /**
  * @brief Calibration function for MPU6050, calculates offsets for gyroscope. 
  */
-void mpu6050_calibration(i2c_master_dev_handle_t dev_handle, uint8_t *data);
+void mpu6050_calibrate(i2c_master_dev_handle_t dev_handle, uint8_t *data);
 
 /**
  * @brief Setup function for MPU6050 by :
@@ -38,14 +38,6 @@ void mpu6050_calibration(i2c_master_dev_handle_t dev_handle, uint8_t *data);
  */
 void mpu6050_setup(i2c_master_dev_handle_t dev_handle, uint8_t *data);
 
-/**
- * @brief Get roll, pitch, and yaw angles from accelerometer data
- */
-void mpu6050_get_angle(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, State *state);
-
-/**
- * @brief Get rotation rates from gyroscope data
- */
-void mpu6050_get_rotation_rate(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, State *state, float dt);
+void mpu6050_update(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, State *state, float dt);
 
 #endif // MPU6050_H

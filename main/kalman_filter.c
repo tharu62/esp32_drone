@@ -1,7 +1,7 @@
 #include "kalman_filter.h"
 
 // Measurement noise (deg²)
-#define STANDARD_DEV_ACCEL_NOISE_SQRD (10.0f * 10.0f)
+#define STANDARD_DEV_ACCEL_NOISE_SQRD (2.0f * 2.0f)
 
 // Process noise
 #define Q_ANGLE 0.001f

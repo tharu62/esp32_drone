@@ -1,27 +1,17 @@
-#include "motor_controller.h"
-// #include "driver/mcpwm_prelude.h"
-// #include "esp_err.h"
+#include "driver/ledc.h"
+#include "esp_err.h"
 
 #define MOTOR_COUNT 4
 
-#define PWM_GPIO_M1 33
-#define PWM_GPIO_M2 34
-#define PWM_GPIO_M3 35
-#define PWM_GPIO_M4 36
+#define PWM_FREQ_HZ      6000
+#define PWM_RESOLUTION   LEDC_TIMER_12_BIT
+#define PWM_MODE         LEDC_LOW_SPEED_MODE
+#define PWM_TIMER        LEDC_TIMER_0
 
-#define PWM_FREQ_HZ  20000      // 20 kHz for MOSFETs
-#define TIMER_RES_HZ 1000000    // 1 MHz resolution
-
-#define MAX_RES 360.0f          // Max control authority
-
-#define A 1.f
-#define B 1.f
-#define C -1.f
-#define D 1.f
-#define E 1.f
-#define F -1.f
-#define G -1.f
-#define H -1.f
+#define PWM_GPIO_M1 2
+#define PWM_GPIO_M2 5
+#define PWM_GPIO_M3 21
+#define PWM_GPIO_M4 12
 
 static const int motor_gpio[MOTOR_COUNT] = {
     PWM_GPIO_M1,
@@ -30,71 +20,43 @@ static const int motor_gpio[MOTOR_COUNT] = {
     PWM_GPIO_M4
 };
 
-/* MCPWM handles */
-static mcpwm_timer_handle_t timer;
-static mcpwm_oper_handle_t oper;
-static mcpwm_cmpr_handle_t comparator[MOTOR_COUNT];
-static mcpwm_gen_handle_t generator[MOTOR_COUNT];
+static const ledc_channel_t motor_channel[MOTOR_COUNT] = {
+    LEDC_CHANNEL_0,
+    LEDC_CHANNEL_1,
+    LEDC_CHANNEL_2,
+    LEDC_CHANNEL_3
+};
 
-/* Motor commands */
-float motor_pwm[MOTOR_COUNT];
+float motor_pwm[MOTOR_COUNT];   // 0–100 %
 
 /* ------------------------------------------------------------ */
 
 void motor_controller_init(void)
 {
-    /* Timer */
-    mcpwm_timer_config_t timer_config = {
-        .group_id = 0,
-        .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
-        .resolution_hz = TIMER_RES_HZ,
-        .period_ticks = TIMER_RES_HZ / PWM_FREQ_HZ,
-        .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
+    /* Timer configuration */
+    ledc_timer_config_t timer_config = {
+        .speed_mode       = PWM_MODE,
+        .timer_num        = PWM_TIMER,
+        .duty_resolution  = PWM_RESOLUTION,
+        .freq_hz          = PWM_FREQ_HZ,
+        .clk_cfg          = LEDC_AUTO_CLK
     };
-    ESP_ERROR_CHECK(mcpwm_new_timer(&timer_config, &timer));
+    ESP_ERROR_CHECK(ledc_timer_config(&timer_config));
 
-    /* Operator */
-    mcpwm_operator_config_t oper_config = {
-        .group_id = 0,
-    };
-    ESP_ERROR_CHECK(mcpwm_new_operator(&oper_config, &oper));
-    ESP_ERROR_CHECK(mcpwm_operator_connect_timer(oper, timer));
-
-    /* Create comparators & generators */
+    /* Channel configuration */
     for (int i = 0; i < MOTOR_COUNT; i++) {
-
-        mcpwm_comparator_config_t cmp_config = {
-            .flags.update_cmp_on_tez = true,
+        ledc_channel_config_t channel_config = {
+            .gpio_num       = motor_gpio[i],
+            .speed_mode     = PWM_MODE,
+            .channel        = motor_channel[i],
+            .intr_type      = LEDC_INTR_DISABLE,
+            .timer_sel      = PWM_TIMER,
+            .duty           = 0,
+            .hpoint         = 0
         };
-        ESP_ERROR_CHECK(mcpwm_new_comparator(oper, &cmp_config, &comparator[i]));
-        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[i], 0));
 
-        mcpwm_generator_config_t gen_config = {
-            .gen_gpio_num = motor_gpio[i],
-        };
-        ESP_ERROR_CHECK(mcpwm_new_generator(oper, &gen_config, &generator[i]));
-
-        /* PWM logic:
-           - HIGH at timer start
-           - LOW when counter reaches compare value
-        */
-        ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(
-            generator[i],
-            MCPWM_GEN_TIMER_EVENT_ACTION(
-                MCPWM_TIMER_DIRECTION_UP,
-                MCPWM_TIMER_EVENT_EMPTY,
-                MCPWM_GEN_ACTION_HIGH)));
-
-        ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(
-            generator[i],
-            MCPWM_GEN_COMPARE_EVENT_ACTION(
-                MCPWM_TIMER_DIRECTION_UP,
-                comparator[i],
-                MCPWM_GEN_ACTION_LOW)));
+        ESP_ERROR_CHECK(ledc_channel_config(&channel_config));
     }
-
-    ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
-    ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
 }
 
 /* ------------------------------------------------------------ */
@@ -110,28 +72,32 @@ static inline float clamp(float v, float min, float max)
 
 void motor_set_speed_percent(void)
 {
-    uint32_t period = TIMER_RES_HZ / PWM_FREQ_HZ;
+    const uint32_t max_duty = (1 << 12) - 1;  // 4095 for 12-bit
 
     for (int i = 0; i < MOTOR_COUNT; i++) {
-        
-        clamp(motor_pwm[i], 0.0f, 100.0f);
-        uint32_t compare = (uint32_t)((motor_pwm[i] / 100.0f) * period);
-        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[i], compare));
+
+        motor_pwm[i] = clamp(motor_pwm[i], 0.0f, 100.0f);
+
+        uint32_t duty = (uint32_t)((motor_pwm[i] / 100.0f) * max_duty);
+
+        ESP_ERROR_CHECK(
+            ledc_set_duty(PWM_MODE, motor_channel[i], duty)
+        );
+
+        ESP_ERROR_CHECK(
+            ledc_update_duty(PWM_MODE, motor_channel[i])
+        );
     }
 }
 
-/* ------------------------------------------------------------ */
 
-void motor_controller(float throttle, float *angle_error)
+void motor_controller(float throttle, float* rotation_rate_output)
 {
-    float roll_error  = angle_error[0];
-    float pitch_error = angle_error[1];
-
-    /* X-configuration quad mixing */
-    motor_pwm[0] = throttle + (((A*roll_error + B*pitch_error)/720.f) + 1) / 2; // Front Left
-    motor_pwm[1] = throttle + (((C*roll_error + D*pitch_error)/720.f) + 1) / 2; // Front Right
-    motor_pwm[2] = throttle + (((E*roll_error + F*pitch_error)/720.f) + 1) / 2; // Rear Right
-    motor_pwm[3] = throttle + (((G*roll_error + H*pitch_error)/720.f) + 1) / 2; // Rear Left
+    motor_pwm[0] = throttle*100.f; // M1
+    motor_pwm[1] = throttle*100.f; // M2
+    motor_pwm[2] = throttle*100.f; // M3
+    motor_pwm[3] = throttle*100.f; // M4
 
     motor_set_speed_percent();
 }
+
