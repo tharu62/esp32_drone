@@ -1,13 +1,12 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- |
+| Supported Targets | ESP32-S3-WROOM-1 |
 
 # DRONE configuration and description
 
 ## Overview
 
-This project desribes the configuration and setup of a 4-motor drone runnig with, 
-an ESP32 as microcontroller, a MPU6050 as sensor and 4 DC motors controlled 
-by hand made motor drivers.  
+This project desribes the configuration and setup of a quadcopter drone.
+The drone is runnig with an ESP32 microcontroller, a MPU6050 sensor and 4 brushless motors controlled by compatible ESCs. It is controlled by remote with a custom made joystick that
+uses ESP-NOW communication. 
 
 ## How to use example
 
@@ -15,23 +14,36 @@ by hand made motor drivers.
 
 ### Hardware Required
 
-To run this project, you should have an Espressif development board based on a chip
- listed in supported targets as well as a MPU6050. MPU6050 is a inertial measurement 
- unit, which contains a accelerometer, gyroscope as well as a temperature sensor, 
- for more information about it, you can read the **MPU-6000.pdf** .
+To run this project, you should at least have an Espressif development board based on a chip
+ listed in supported targets as well as a MPU6050. The latter is a inertial measurement 
+ unit, which contains an accelerometer, a gyroscope as well as a temperature sensor. 
+ For more information you can read the added documentation. You can use whatever motor you can 
+ find but it has to allow pwm controll on 3V3, as the esp32-s3 chip run on 3V3 logic level.
+ Detailed list of components:
+ - ESP32-S3-WROOM-1 chip
+ - MPU6050
+ - 4 BRUSHLESS MOTORS 1503
+ - 4 MINI ESC COMPATIBLE WITH THE MOTORS
+ - PCB + ELETTRICAL COMPONENT (search BOP, CPL and GERBER in the doc folder)
 
 #### Pin Assignment
 
-**Note:** The following pin assignments are used by default, you can change these in the `menuconfig` .
+**Note:** The following pin assignments are used by default, you can change these in the code.
 
-|                  | SDA             | SCL           |
+
+|                  | SDA            | SCL            |
 | ---------------- | -------------- | -------------- |
-| ESP I2C Master   | I2C_MASTER_SDA | I2C_MASTER_SCL |
+| ESP32 I2C Master | GPIOXX         | GPIOXX         |
 | MPU6050 Sensor   | SDA            | SCL            |
 
-For the actual default value of `I2C_MASTER_SDA` and `I2C_MASTER_SCL` see `Example Configuration` in `menuconfig`.
 
-**Note:** There's no need to add an external pull-up resistors for SDA/SCL pin, because the driver will enable the internal pull-up resistors.
+|  ESC SIGNAL PIN | MOTOR A  | MOTOR B | MOTOR C | MOTOR D | 
+| --------------- | -------- | ------- | ------- | ------- |
+| ESP32 MOTOR PWM | GPIOXX   | GPIOXX  | GPIOXX  | GPIOXX  |
+
+
+
+**Note:** There's no need to add an external pull-up resistors for any pin, because the driver will enable the internal pull-up resistors.
 
 ### Build and Flash
 
