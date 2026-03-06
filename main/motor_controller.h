@@ -11,15 +11,21 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
-// Initialize the motor controller variables.
+/**
+ * @brief Initialize ledc_timer and ledc_channel (PWM setup)
+ */
 void motor_controller_init(void);
 
+/**
+ * @brief Set motor speeds based on throttle and rotation rate outputs
+ */
 void motor_set_speed_percent(void);
 
 /**
- * @brief Control motors based on input commands
- * @param throttle 
- * @param rotation_rate_output
+ * @brief Control motors based on input commands by adjusting PWM duty cycles for quadcopter logic.
+ *        Calls motor_set_speed_percent() to apply the changes.
+ * @param throttle User input throttle (0-100%)
+ * @param rotation_rate_output Array of rotation rates for roll and pitch (output from angle controller)
  */
 void motor_controller(float throttle, float* rotation_rate_output);
 

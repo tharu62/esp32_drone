@@ -50,11 +50,11 @@ void app_main(void)
     
     init_espnow();
 
-    float desired_angles[2] = {0.0f, 0.0f};                 // Angles given by user (roll, pitch)
-    float throttle = 100.0f;                                // Throttle input from user (0-100%)
-    float pid_angle_error[2] = {0.0f, 0.0f};                // Placeholder for angle controller outputs
+    float desired_angles[2] = {0.0f, 0.0f};  // Angles given by user (roll, pitch)
+    float throttle = 100.0f;                 // Throttle input from user (0-100%)
+    float pid_angle_error[2] = {0.0f, 0.0f}; // Placeholder for angle controller outputs
 
-    float dt = 0.005f; // Time step for control loop (5 ms)
+    float dt = 0.005f; // Time step for control loop (5 ms = 200Hz)
     float t_start = 0.0f;
     float t_end = 0.0f;
     float elapsed = 0.0f;
@@ -77,6 +77,9 @@ void app_main(void)
 
         // Read sensor data & Run Kalman filter to update state estimation
         mpu6050_update(dev_handle, bus_handle, data, &drone_state, dt);
+
+        //@todo - this version was made by chatgpt, needs to be tested and tuned for our specific application 
+        // Need to simplify the Kalman filter and tune the parameters for our specific application to get good performance.
         kalman_filter(&drone_state, dt); 
 
         // Make sure to run at fixed time interval

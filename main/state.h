@@ -6,6 +6,7 @@ typedef struct {
     float m_angle[2];           // Measured angles from accelerometer: roll, pitch, yaw 
     float k_angle[2];           // Kalman filtered angles: roll, pitch, yaw
     float angular_velocity[3];  // Angular velocity from gyroscope: roll rate, pitch rate, yaw rate
+    float acceleration[3];      // Acceleration from accelerometer: ax, ay, az
 } State;
 
 void init_state(State *state);

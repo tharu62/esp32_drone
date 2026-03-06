@@ -6,6 +6,8 @@ void init_state(State *state)
         state->d_angle[i] = 0.0f;
         state->m_angle[i] = 0.0f;
         state->k_angle[i] = 0.0f;
+        state->angular_velocity[i] = 0.0f;
+        state->acceleration[i] = 0.0f;
     }
 }
 

@@ -33,28 +33,20 @@ float GYRO_OFFSET_Y  = 0.0f;
 
 /* ===================== I2C HELPERS ===================== */
 
-esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev,
-                                uint8_t reg,
-                                uint8_t *data,
-                                size_t len)
+esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t *data, size_t len)
 {
-    return i2c_master_transmit_receive(dev, &reg, 1, data, len,
-                                       I2C_MASTER_TIMEOUT_MS);
+    return i2c_master_transmit_receive(dev, &reg, 1, data, len, I2C_MASTER_TIMEOUT_MS);
 }
 
-esp_err_t mpu6050_register_write(i2c_master_dev_handle_t dev,
-                                 uint8_t reg,
-                                 uint8_t data)
+esp_err_t mpu6050_register_write(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t data)
 {
     uint8_t buf[2] = {reg, data};
-    return i2c_master_transmit(dev, buf, sizeof(buf),
-                               I2C_MASTER_TIMEOUT_MS);
+    return i2c_master_transmit(dev, buf, sizeof(buf), I2C_MASTER_TIMEOUT_MS);
 }
 
 /* ===================== I2C INIT ===================== */
 
-void i2c_master_init(i2c_master_bus_handle_t *bus,
-                     i2c_master_dev_handle_t *dev)
+void i2c_master_init(i2c_master_bus_handle_t *bus, i2c_master_dev_handle_t *dev)
 {
     i2c_master_bus_config_t bus_cfg = {
         .i2c_port = I2C_MASTER_NUM,
@@ -103,7 +95,7 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
 
         ACCEL_OFFSET_X += ax;
         ACCEL_OFFSET_Y += ay;
-        ACCEL_OFFSET_Z += (az - 16384);
+        ACCEL_OFFSET_Z += az;
 
         ESP_ERROR_CHECK(mpu6050_register_read(dev, MPU6050_GYRO_REG_ADDR, data, 6));
         int16_t gx = (data[0] << 8) | data[1];
@@ -140,8 +132,8 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, ui
     float yg = ((float)ay - ACCEL_OFFSET_Y) / 16384.0f;
     float zg = ((float)az - ACCEL_OFFSET_Z) / 16384.0f;
 
-    float accel_roll  = atan2f(yg, sqrtf(xg * xg + zg * zg)) * 180.0f / M_PI;
-    float accel_pitch = atan2f(-xg, sqrtf(yg * yg + zg * zg)) * 180.0f / M_PI;
+    state->acceleration[0]  = atan2f(yg, sqrtf(xg * xg + zg * zg)) * 180.0f / M_PI;
+    state->acceleration[1] = atan2f(-xg, sqrtf(yg * yg + zg * zg)) * 180.0f / M_PI;
 
     while (mpu6050_register_read(dev, MPU6050_GYRO_REG_ADDR, data, 6) != ESP_OK) {
         i2c_master_bus_reset(bus);
@@ -153,8 +145,9 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, ui
     float gyro_x = ((float)gx - GYRO_OFFSET_X) / 131.0f;
     float gyro_y = ((float)gy - GYRO_OFFSET_Y) / 131.0f;
 
-    state->m_angle[0] = ALPHA * (state->m_angle[0] + gyro_x * dt) + (1.0f - ALPHA) * accel_roll;
-    state->m_angle[1] = ALPHA * (state->m_angle[1] + gyro_y * dt) + (1.0f - ALPHA) * accel_pitch;
+    // @todo
+    state->m_angle[0] = ALPHA * (state->m_angle[0] + gyro_x * dt) + (1.0f - ALPHA) * state->acceleration[0];
+    state->m_angle[1] = ALPHA * (state->m_angle[1] + gyro_y * dt) + (1.0f - ALPHA) * state->acceleration[1];
 
     state->angular_velocity[0] = gyro_x;
     state->angular_velocity[1] = gyro_y;

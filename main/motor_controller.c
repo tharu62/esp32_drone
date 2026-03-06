@@ -13,8 +13,8 @@
 #define PWM_GPIO_M3 21
 #define PWM_GPIO_M4 12
 
-#define ESC_MIN_US 1000
-#define ESC_MAX_US 2000
+#define ESC_MIN_US 1000 // 1ms (0% throttle)    
+#define ESC_MAX_US 2000 // 2ms (100% throttle)
 #define ESC_PERIOD_US 20000   // 20 ms (50 Hz)
 
 static const int motor_gpio[MOTOR_COUNT] = {

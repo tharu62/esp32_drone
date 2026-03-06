@@ -7,12 +7,10 @@
 
 #define DRONE_TAG "ESP_NOW_DRONE"
 
-/* Fixed, locally administered MAC for the drone (receiver)
+/* Fixed MAC address for the drone (receiver)
  * 02 = locally administered, unicast
  */
-static const uint8_t DRONE_MAC[6] = { 
-    0x02, 0x00, 0x00, 0x00, 0x00, 0x01 
-};
+static const uint8_t DRONE_MAC[6] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
 float throttle = 0.0f;
 float roll = 0.0f;
@@ -23,20 +21,21 @@ typedef struct __attribute__((packed))
     float throttle;
     float roll;
     float pitch;
-} control_packet_t;
+} message;
 
 // Callback for received ESP-NOW packets
 void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int data_len)
 {
-    // if (data_len != sizeof(control_packet_t)) return;
+    // if (data_len != sizeof(message)) return; // Ignore packets of unexpected size
 
-    control_packet_t pkt;
+    message pkt;
     memcpy(&pkt, data, sizeof(pkt));
 
     throttle = pkt.throttle;
     roll     = pkt.roll;
     pitch    = pkt.pitch;
 
+    // Debug log for received control inputs 
     // ESP_LOGI(
     //     DRONE_TAG,
     //     "Received control packet: T=%.2f R=%.2f P=%.2f",
@@ -44,7 +43,6 @@ void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     //     roll,
     //     pitch
     // );
-
 }
 
 void init_espnow(void) 
@@ -76,7 +74,6 @@ void init_espnow(void)
     );
 }
 
-// Accessor function
 void get_control_inputs(float *out_throttle, float *out_roll, float *out_pitch) 
 {
     *out_throttle = throttle;

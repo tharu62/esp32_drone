@@ -8,13 +8,11 @@
 #define I_PITCH_ANGLE 1.0f
 #define D_PITCH_ANGLE 0.03f
 
-
 float previous_roll_angle_error = 0.0f;
 float previous_pitch_angle_error = 0.0f;
 
 float roll_angle_integral = 0.0f;
 float pitch_angle_integral = 0.0f;
-
 
 void angle_controller_init(void) 
 {
@@ -24,7 +22,6 @@ void angle_controller_init(void)
     pitch_angle_integral = 0.0f;
     return;
 }
-
 
 void angle_pid_controller(float* desired_angles, State* drone_state, float dt, float* pid_angle_error)
 {

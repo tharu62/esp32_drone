@@ -1,6 +1,6 @@
 | Supported Targets | ESP32-S3-WROOM-1 |
 
-# DRONE configuration and description
+# DRONE configuration and description (WORK IN PROGRESS)
 
 ## Overview
 
