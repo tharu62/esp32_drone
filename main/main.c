@@ -13,9 +13,9 @@
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/i2c_master.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "driver/i2c_master.h"
 
 #include "state.h"
 #include "mpu6050.h"
@@ -78,8 +78,7 @@ void app_main(void)
         // Read sensor data & Run Kalman filter to update state estimation
         mpu6050_update(dev_handle, bus_handle, data, &drone_state, dt);
 
-        //@todo - this version was made by chatgpt, needs to be tested and tuned for our specific application 
-        // Need to simplify the Kalman filter and tune the parameters for our specific application to get good performance.
+        // @todo : calibrate kalman filter parameters for better performance.
         kalman_filter(&drone_state, dt); 
 
         // Make sure to run at fixed time interval

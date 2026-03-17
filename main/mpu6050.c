@@ -1,12 +1,4 @@
-#include <math.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_log.h"
-#include "esp_timer.h"
-#include "driver/i2c_master.h"
 #include "mpu6050.h"
-
-/* ===================== CONFIG ===================== */
 
 #define I2C_MASTER_SCL_IO           GPIO_NUM_38
 #define I2C_MASTER_SDA_IO           GPIO_NUM_37
@@ -20,9 +12,7 @@
 #define MPU6050_ACCEL_REG_ADDR      0x3B
 #define MPU6050_GYRO_REG_ADDR       0x43
 
-#define ALPHA 0.98f                 // Complementary filter factor
-
-/* ===================== STATE ===================== */
+#define ALPHA 0.98f // Complementary filter factor
 
 float ACCEL_OFFSET_X = 0.0f;
 float ACCEL_OFFSET_Y = 0.0f;
@@ -31,7 +21,6 @@ float ACCEL_OFFSET_Z = 0.0f;
 float GYRO_OFFSET_X  = 0.0f;
 float GYRO_OFFSET_Y  = 0.0f;
 
-/* ===================== I2C HELPERS ===================== */
 
 esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t *data, size_t len)
 {
@@ -44,7 +33,6 @@ esp_err_t mpu6050_register_write(i2c_master_dev_handle_t dev, uint8_t reg, uint8
     return i2c_master_transmit(dev, buf, sizeof(buf), I2C_MASTER_TIMEOUT_MS);
 }
 
-/* ===================== I2C INIT ===================== */
 
 void i2c_master_init(i2c_master_bus_handle_t *bus, i2c_master_dev_handle_t *dev)
 {
@@ -66,8 +54,6 @@ void i2c_master_init(i2c_master_bus_handle_t *bus, i2c_master_dev_handle_t *dev)
     ESP_ERROR_CHECK(i2c_master_bus_add_device(*bus, &dev_cfg, dev));
 }
 
-/* ===================== MPU SETUP ===================== */
-
 void mpu6050_setup(i2c_master_dev_handle_t dev, uint8_t *data)
 {
     ESP_ERROR_CHECK(mpu6050_register_write(dev, MPU6050_PWR_MGMT_1_REG_ADDR, 0x00));
@@ -81,7 +67,6 @@ void mpu6050_setup(i2c_master_dev_handle_t dev, uint8_t *data)
     ESP_ERROR_CHECK(mpu6050_register_write(dev, 0x1B, 0x00)); // ±250°/s
 }
 
-/* ===================== CALIBRATION ===================== */
 
 void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
 {
@@ -103,6 +88,7 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
 
         GYRO_OFFSET_X += gx;
         GYRO_OFFSET_Y += gy;
+        // Z gyro offset is not needed since no use of yaw angle for control
 
         vTaskDelay(pdMS_TO_TICKS(1));
     }
@@ -116,7 +102,6 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
     ESP_LOGI("MPU6050", "Calibration done");
 }
 
-/* ===================== SENSOR UPDATE ===================== */
 
 void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, uint8_t *data, State *state, float dt)
 {
@@ -145,7 +130,7 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, ui
     float gyro_x = ((float)gx - GYRO_OFFSET_X) / 131.0f;
     float gyro_y = ((float)gy - GYRO_OFFSET_Y) / 131.0f;
 
-    // @todo
+    // @todo : check if correct
     state->m_angle[0] = ALPHA * (state->m_angle[0] + gyro_x * dt) + (1.0f - ALPHA) * state->acceleration[0];
     state->m_angle[1] = ALPHA * (state->m_angle[1] + gyro_y * dt) + (1.0f - ALPHA) * state->acceleration[1];
 

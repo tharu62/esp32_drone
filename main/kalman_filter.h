@@ -3,7 +3,8 @@
 
 #include "state.h"
 
-void reset_kalman_filter(); 
+void reset_kalman_filter();
+ 
 void kalman_filter(State *state, float dt);
 
 #endif // KALMAN_FILTER_H
