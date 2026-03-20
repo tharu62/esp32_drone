@@ -1,13 +1,12 @@
 /*
  * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
- */
+*/
 
 /* Simple Firmaware for ESP32
 
    This code initializes the I2C bus and communicates with a MPU6050 sensor
    to read accelerometer and gyroscope data in a loop.
-
 */
 #include <stdio.h>
 #include "sdkconfig.h"
