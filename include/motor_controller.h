@@ -19,8 +19,8 @@ void motor_controller_init(void);
  * @brief Control motors based on input commands by adjusting PWM duty cycles for quadcopter logic.
  *        Calls motor_set_speed_percent() to apply the changes.
  * @param throttle User input throttle (0-100%)
- * @param rotation_rate Array of rotation rates for roll and pitch (output from angle controller)
+ * @param pid_angle_error Array of PID angle errors for roll and pitch (output from angle controller)
  */
-void motor_controller(float throttle, float* rotation_rate);
+void motor_controller(float throttle, float* pid_angle_error);
 
 #endif // MOTOR_H

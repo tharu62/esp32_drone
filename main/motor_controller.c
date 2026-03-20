@@ -7,10 +7,10 @@
 #define PWM_MODE         LEDC_LOW_SPEED_MODE
 #define PWM_TIMER        LEDC_TIMER_0
 
-#define PWM_GPIO_M1 2
-#define PWM_GPIO_M2 5
-#define PWM_GPIO_M3 21
-#define PWM_GPIO_M4 12
+#define PWM_GPIO_M1 1
+#define PWM_GPIO_M2 4
+#define PWM_GPIO_M3 38
+#define PWM_GPIO_M4 3
 
 #define ESC_MIN_US 1000 // 1ms (0% throttle)    
 #define ESC_MAX_US 2000 // 2ms (100% throttle)
@@ -76,12 +76,17 @@ const uint32_t max_duty = 1638.3; // us_to_duty(ESC_MAX_US) = (2000 * 16383) / 2
 const uint32_t duty_range = 819.15; // max_duty - min_duty = 819.15
 
 // @todo : adding roll, pitch and yaw in the motor control logic.
-void motor_controller(float throttle, float* rotation_rate_output)
+void motor_controller(float throttle, float* pid_angle_error)
 {
     motor_pwm[0] = throttle * 100.f;
     motor_pwm[1] = throttle * 100.f;
     motor_pwm[2] = throttle * 100.f;
     motor_pwm[3] = throttle * 100.f;
+
+    // motor_pwm[0] =   pid_angle_error[0] + pid_angle_error[1] - pid_angle_error[2] + throttle * 100.f; // M1
+    // motor_pwm[1] = - pid_angle_error[0] + pid_angle_error[1] + pid_angle_error[2] + throttle * 100.f; // M2
+    // motor_pwm[2] = - pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle * 100.f; // M3
+    // motor_pwm[3] =   pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle * 100.f; // M4
 
 
     // Setting motor speeds by converting the throttle percentage to duty cycle 

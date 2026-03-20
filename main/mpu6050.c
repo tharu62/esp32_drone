@@ -1,7 +1,7 @@
 #include "mpu6050.h"
 
-#define I2C_MASTER_SCL_IO           GPIO_NUM_38
-#define I2C_MASTER_SDA_IO           GPIO_NUM_37
+#define I2C_MASTER_SCL_IO           GPIO_NUM_11
+#define I2C_MASTER_SDA_IO           GPIO_NUM_10
 #define I2C_MASTER_NUM              I2C_NUM_0
 #define I2C_MASTER_FREQ_HZ          400000
 #define I2C_MASTER_TIMEOUT_MS       1000
