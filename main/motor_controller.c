@@ -12,8 +12,8 @@
 #define PWM_GPIO_M3 38
 #define PWM_GPIO_M4 3
 
-#define ESC_MIN_US 1000 // 1ms (0% throttle)    
-#define ESC_MAX_US 2000 // 2ms (100% throttle)
+#define ESC_MIN_US 1000     // 1ms (0% throttle)
+#define ESC_MAX_US 2000     // 2ms (100% throttle)
 #define ESC_PERIOD_US 20000 // 20 ms (50 Hz)
 
 static const int motor_gpio[MOTOR_COUNT] = {
@@ -32,16 +32,17 @@ static const ledc_channel_t motor_channel[MOTOR_COUNT] = {
 
 float motor_pwm[MOTOR_COUNT];   // 0–100 %
 
-
 /* Convert microseconds to LEDC duty */
 static uint32_t us_to_duty(uint32_t pulse_width_us)
 {
-    const uint32_t max_duty = (1 << 14) - 1;  // For 14-bit resolution, max duty is 2^14 - 1 = 16383
-    // pulse_width_us is the desired pulse width in microseconds (between ESC_MIN_US and ESC_MAX_US)
-    // ESC_PERIOD_US is the total period of the PWM signal in microseconds (20 ms for 50 Hz)
-    // => duty_cycle = (pulse[us] / period[us]) * max_duty = [0, max_duty]
-    return (pulse_width_us * max_duty) / ESC_PERIOD_US; 
+    const uint32_t max_duty = (1 << PWM_RESOLUTION) - 1;
+    return (pulse_width_us * max_duty) / ESC_PERIOD_US;
 }
+
+/* Precomputed duty limits (correct integer math) */
+static const uint32_t min_duty = (ESC_MIN_US * ((1 << PWM_RESOLUTION) - 1)) / ESC_PERIOD_US;
+static const uint32_t max_duty = (ESC_MAX_US * ((1 << PWM_RESOLUTION) - 1)) / ESC_PERIOD_US;
+static const uint32_t duty_range = (max_duty - min_duty);
 
 
 void motor_controller_init(void)
@@ -71,33 +72,30 @@ void motor_controller_init(void)
     }
 }
 
-const uint32_t min_duty = 819.15; // us_to_duty(ESC_MIN_US) = (1000 * 16383) / 20000 = 819.15
-const uint32_t max_duty = 1638.3; // us_to_duty(ESC_MAX_US) = (2000 * 16383) / 20000 = 1638.3
-const uint32_t duty_range = 819.15; // max_duty - min_duty = 819.15
 
 // @todo : adding roll, pitch and yaw in the motor control logic.
 void motor_controller(float throttle, float* pid_angle_error)
 {
-    motor_pwm[0] = throttle * 100.f;
-    motor_pwm[1] = throttle * 100.f;
-    motor_pwm[2] = throttle * 100.f;
-    motor_pwm[3] = throttle * 100.f;
+    (void)pid_angle_error; // unused for now
 
-    // motor_pwm[0] =   pid_angle_error[0] + pid_angle_error[1] - pid_angle_error[2] + throttle * 100.f; // M1
-    // motor_pwm[1] = - pid_angle_error[0] + pid_angle_error[1] + pid_angle_error[2] + throttle * 100.f; // M2
-    // motor_pwm[2] = - pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle * 100.f; // M3
-    // motor_pwm[3] =   pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle * 100.f; // M4
+    motor_pwm[0] = throttle * 100.f; 
+    motor_pwm[1] = throttle * 100.f; 
+    motor_pwm[2] = throttle * 100.f; 
+    motor_pwm[3] = throttle * 100.f;  
 
+    // motor_pwm[0] = ( pid_angle_error[0] + pid_angle_error[1] - pid_angle_error[2] + throttle) * 100.f; // M1 
+    // motor_pwm[1] = (-pid_angle_error[0] + pid_angle_error[1] + pid_angle_error[2] + throttle) * 100.f; // M2 
+    // motor_pwm[2] = (-pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle) * 100.f; // M3
+    // motor_pwm[3] = ( pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle) * 100.f; // M4
 
-    // Setting motor speeds by converting the throttle percentage to duty cycle 
-    // and applying it to each motor channel
     for (int i = 0; i < MOTOR_COUNT; i++) {
 
-        // clamping the motor pwm values to [0, 100] % to avoid invalid duty cycles
-        if(motor_pwm[i] < 0.01f) motor_pwm[i] = 0.0f; 
-        if(motor_pwm[i] > 99.99f) motor_pwm[i] = 100.0f; 
+        // Proper clamping
+        if (motor_pwm[i] < 0.0f) motor_pwm[i] = 0.0f;
+        if (motor_pwm[i] > 100.0f) motor_pwm[i] = 100.0f;
 
-        uint32_t duty = min_duty + (uint32_t)((motor_pwm[i] / 100.0f) * duty_range);
+        // Convert %[0,100] → duty[0,16383] with correct scaling and offset for ESC
+        uint32_t duty = min_duty + (uint32_t)((motor_pwm[i] * duty_range) / 100.0f);
 
         ESP_ERROR_CHECK(
             ledc_set_duty(PWM_MODE, motor_channel[i], duty)

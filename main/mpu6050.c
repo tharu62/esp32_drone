@@ -14,12 +14,12 @@
 
 #define ALPHA 0.98f // Complementary filter factor
 
-float ACCEL_OFFSET_X = 0.0f;
-float ACCEL_OFFSET_Y = 0.0f;
-float ACCEL_OFFSET_Z = 0.0f;
+static float ACCEL_OFFSET_X = 0.0f;
+static float ACCEL_OFFSET_Y = 0.0f;
+static float ACCEL_OFFSET_Z = 0.0f;
 
-float GYRO_OFFSET_X  = 0.0f;
-float GYRO_OFFSET_Y  = 0.0f;
+static float GYRO_OFFSET_X  = 0.0f;
+static float GYRO_OFFSET_Y  = 0.0f;
 
 
 esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t *data, size_t len)
@@ -56,7 +56,11 @@ void i2c_master_init(i2c_master_bus_handle_t *bus, i2c_master_dev_handle_t *dev)
 
 void mpu6050_setup(i2c_master_dev_handle_t dev, uint8_t *data)
 {
-    ESP_ERROR_CHECK(mpu6050_register_write(dev, MPU6050_PWR_MGMT_1_REG_ADDR, 0x00));
+    // ESP_ERROR_CHECK(mpu6050_register_write(dev, MPU6050_PWR_MGMT_1_REG_ADDR, 0x00));
+    while(mpu6050_register_write(dev, MPU6050_PWR_MGMT_1_REG_ADDR, 0x00) != ESP_OK){
+        ESP_LOGI("MPU6050", "Failed to wake up MPU6050, retrying...");
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
 
     ESP_ERROR_CHECK(mpu6050_register_read(dev, MPU6050_WHO_AM_I_REG_ADDR, data, 1));
     ESP_LOGI("MPU6050", "WHO_AM_I = 0x%X", data[0]);
@@ -78,16 +82,16 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
         int16_t ay = (data[2] << 8) | data[3];
         int16_t az = (data[4] << 8) | data[5];
 
-        ACCEL_OFFSET_X += ax;
-        ACCEL_OFFSET_Y += ay;
-        ACCEL_OFFSET_Z += az;
+        ACCEL_OFFSET_X += ax/16384.0f; 
+        ACCEL_OFFSET_Y += ay/16384.0f; 
+        ACCEL_OFFSET_Z += az/16384.0f; 
 
         ESP_ERROR_CHECK(mpu6050_register_read(dev, MPU6050_GYRO_REG_ADDR, data, 6));
         int16_t gx = (data[0] << 8) | data[1];
         int16_t gy = (data[2] << 8) | data[3];
 
-        GYRO_OFFSET_X += gx;
-        GYRO_OFFSET_Y += gy;
+        GYRO_OFFSET_X += gx/131.0f;
+        GYRO_OFFSET_Y += gy/131.0f;
         // Z gyro offset is not needed since no use of yaw angle for control
 
         vTaskDelay(pdMS_TO_TICKS(1));
@@ -96,6 +100,7 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
     ACCEL_OFFSET_X /= 2000.0f;
     ACCEL_OFFSET_Y /= 2000.0f;
     ACCEL_OFFSET_Z /= 2000.0f;
+
     GYRO_OFFSET_X  /= 2000.0f;
     GYRO_OFFSET_Y  /= 2000.0f;
 

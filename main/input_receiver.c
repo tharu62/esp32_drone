@@ -1,11 +1,9 @@
 #include "input_receiver.h"
-#include "esp_now.h"
-#include "esp_wifi.h"
-#include "esp_log.h"
-#include "nvs_flash.h"
-#include "esp_netif.h"
 
 #define DRONE_TAG "ESP_NOW_DRONE"
+
+#define BLINK_GPIO 21
+
 
 /* Fixed MAC address for the drone (receiver)
  * 02 = locally administered, unicast
@@ -72,6 +70,16 @@ void init_espnow(void)
         DRONE_MAC[0], DRONE_MAC[1], DRONE_MAC[2],
         DRONE_MAC[3], DRONE_MAC[4], DRONE_MAC[5]
     );
+
+    while(throttle == 0.0f) {
+        ESP_LOGI(DRONE_TAG, "Waiting for first control packet...");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    // Set the GPIO 21 high to indicate the esp32 is communicating with the controller.
+    gpio_reset_pin(BLINK_GPIO);
+    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_level(BLINK_GPIO, 1);
 }
 
 void get_control_inputs(float *out_throttle, float *out_roll, float *out_pitch) 

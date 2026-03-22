@@ -6,6 +6,8 @@
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "esp_netif.h"
+#include "driver/gpio.h"
 
 /**
  * @brief Callback function to handle received ESP-NOW packets containing 

@@ -25,7 +25,9 @@
 
 static const char *TAG = "drone";
 
-// #define DEBUG // Comment this out to disable debug features (MPU6050, PID, Kalman filter)
+#define MAIN_LOOP // Comment this out to disable main control loop (for testing...)
+// #define DEBUG     // Comment this out to disable debug features (MPU6050, PID, Kalman filter)
+
 
 /**
  * @brief Main application
@@ -40,9 +42,9 @@ void app_main(void)
 
     State drone_state;
     init_state(&drone_state); // Zeroes roll and pitch angles
-
+    
     mpu6050_setup(dev_handle, data);
-    mpu6050_calibrate(dev_handle, data); 
+    mpu6050_calibrate(dev_handle, data); // Calibrate sensor to get accurate readings
     
     angle_controller_init();
     
@@ -55,16 +57,17 @@ void app_main(void)
     ESP_LOGI(TAG, "Drone ON.");
 
     float desired_angles[2] = {0.0f, 0.0f};  // Angles given by user (roll, pitch)
-    float throttle = 100.0f;                 // Throttle input from user (0-100%)
+    float throttle = 0.0f;                   // Throttle input from user (0-100%)
     float pid_angle_error[3] = {0.0f, 0.0f}; // Placeholder for angle controller outputs
 
-    float dt = 5.0f; // Time step for control loop (5 ms = 200Hz)
+    float dt = 1000.0f; // Time step for control loop (1000 us = 1000 Hz)
     float t_start = 0.0f;
     float t_end = 0.0f;
-    t_start = esp_timer_get_time(); // Get current time in milliseconds
-    // Main control loop
+    t_start = esp_timer_get_time(); // Get current time in microseconds
+    // MAIN CONTROL LOOP
     while (true) {
 
+#ifdef MAIN_LOOP        
         if ((t_end - t_start) >= dt) {
             // Read Input from user (desired angles and throttle)
             get_control_inputs(&throttle, &desired_angles[0], &desired_angles[1]);
@@ -87,10 +90,17 @@ void app_main(void)
             // Make sure to run at fixed time interval
             t_start = esp_timer_get_time(); // Get current time in milliseconds
         }
-        t_end = esp_timer_get_time(); // Get current time in milliseconds
-        printf("%f,%f,%f\n", drone_state.m_angle[0], drone_state.m_angle[1], throttle);
-        printf("looping...\n");
-        vTaskDelay((1000) / portTICK_PERIOD_MS); // Delay to maintain loop timing
+#endif
+    
+#ifdef DEBUG        
+        // printf("%f,%f,%f\n", drone_state.acceleration[0], drone_state.acceleration[1], throttle);
+        printf("%f\n", throttle);
+        // printf("looping...\n");
+        // vTaskDelay((500) / portTICK_PERIOD_MS); // Delay to maintain loop timing
+#endif
+        
+        // Get current time in milliseconds
+        t_end = esp_timer_get_time();
     }
 
     // Cleanup
