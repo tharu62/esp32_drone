@@ -74,14 +74,13 @@ void motor_controller_init(void)
 
 
 // @todo : adding roll, pitch and yaw in the motor control logic.
-void motor_controller(float throttle, float* pid_angle_error)
+void motor_controller(State *drone_state)
 {
-    (void)pid_angle_error; // unused for now
 
-    motor_pwm[0] = throttle * 100.f; 
-    motor_pwm[1] = throttle * 100.f; 
-    motor_pwm[2] = throttle * 100.f; 
-    motor_pwm[3] = throttle * 100.f;  
+    motor_pwm[0] = drone_state->throttle * 100.f; 
+    motor_pwm[1] = drone_state->throttle * 100.f; 
+    motor_pwm[2] = drone_state->throttle * 100.f; 
+    motor_pwm[3] = drone_state->throttle * 100.f;  
 
     // motor_pwm[0] = ( pid_angle_error[0] + pid_angle_error[1] - pid_angle_error[2] + throttle) * 100.f; // M1 
     // motor_pwm[1] = (-pid_angle_error[0] + pid_angle_error[1] + pid_angle_error[2] + throttle) * 100.f; // M2 

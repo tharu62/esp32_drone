@@ -3,8 +3,8 @@
 #define I2C_MASTER_SCL_IO           GPIO_NUM_11
 #define I2C_MASTER_SDA_IO           GPIO_NUM_10
 #define I2C_MASTER_NUM              I2C_NUM_0
-#define I2C_MASTER_FREQ_HZ          400000
-#define I2C_MASTER_TIMEOUT_MS       1000
+#define I2C_MASTER_FREQ_HZ          400000 // 400 kHz
+#define I2C_MASTER_TIMEOUT_MS       1000 
 
 #define MPU6050_SENSOR_ADDR         0x68
 #define MPU6050_WHO_AM_I_REG_ADDR   0x75
@@ -12,16 +12,9 @@
 #define MPU6050_ACCEL_REG_ADDR      0x3B
 #define MPU6050_GYRO_REG_ADDR       0x43
 
-#define ALPHA 0.98f // Complementary filter factor
-
 static float ACCEL_OFFSET_X = 0.0f;
 static float ACCEL_OFFSET_Y = 0.0f;
 static float ACCEL_OFFSET_Z = 0.0f;
-
-static float GYRO_OFFSET_X  = 0.0f;
-static float GYRO_OFFSET_Y  = 0.0f;
-static float GYRO_OFFSET_Z  = 0.0f;
-
 
 esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t *data, size_t len)
 {
@@ -87,26 +80,12 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
         ACCEL_OFFSET_Y += (float)ay / 16384.0f; 
         ACCEL_OFFSET_Z += (float)az / 16384.0f; 
 
-        ESP_ERROR_CHECK(mpu6050_register_read(dev, MPU6050_GYRO_REG_ADDR, data, 6));
-        int16_t gx = (data[0] << 8) | data[1];
-        int16_t gy = (data[2] << 8) | data[3];
-        int16_t gz = (data[4] << 8) | data[5];
-
-        GYRO_OFFSET_X += (float)gx / 131.0f;
-        GYRO_OFFSET_Y += (float)gy / 131.0f;
-        GYRO_OFFSET_Z += (float)gz / 131.0f;
-        // Z gyro offset is not needed since no use of yaw angle for control
-
-        // vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 
-    ACCEL_OFFSET_X /= 2000.0f;
-    ACCEL_OFFSET_Y /= 2000.0f;
-    ACCEL_OFFSET_Z /= 2000.0f;
-
-    GYRO_OFFSET_X  /= 2000.0f;
-    GYRO_OFFSET_Y  /= 2000.0f;
-    GYRO_OFFSET_Z  /= 2000.0f;
+    ACCEL_OFFSET_X /= 100.0f;
+    ACCEL_OFFSET_Y /= 100.0f;
+    ACCEL_OFFSET_Z /= 100.0f;
 
     ESP_LOGI("MPU6050", "Calibration done");
 }
@@ -123,9 +102,9 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, ui
     int16_t ay = (data[2] << 8) | data[3];
     int16_t az = (data[4] << 8) | data[5];
 
-    float xg = ((float)ax / 16384.0f);
-    float yg = ((float)ay / 16384.0f);
-    float zg = ((float)az / 16384.0f);
+    float xg = (float)ax / 16384.0f - ACCEL_OFFSET_X;
+    float yg = (float)ay / 16384.0f - ACCEL_OFFSET_Y;
+    float zg = (float)az / 16384.0f - ACCEL_OFFSET_Z;
 
     state->acceleration[0] = xg;
     state->acceleration[1] = yg;
@@ -142,16 +121,15 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, ui
     int16_t gy = (data[2] << 8) | data[3];
     int16_t gz = (data[4] << 8) | data[5];
 
-    float gyro_x = ((float)gx / 131.0f);
-    float gyro_y = ((float)gy / 131.0f);
-    float gyro_z = ((float)gz / 131.0f);
+    float gyro_x = (float)gx / 131.0f;
+    float gyro_y = (float)gy / 131.0f;
+    float gyro_z = (float)gz / 131.0f;
 
     state->angular_velocity[0] = gyro_x;
     state->angular_velocity[1] = gyro_y;
     state->angular_velocity[2] = gyro_z;
     
     // unused method to calculate angles by integration.
-    // state->m_angle[0] += gyro_x * (dt/1000.0f); // Convert dt from ms to seconds
-    // state->m_angle[1] += gyro_y * (dt/1000.0f); // Convert dt from ms to seconds
-    // state->m_angle[0] += gyro_x * (dt/1000.0f); // dt is already in seconds
+    // state->m_angle[0] += gyro_x * dt; 
+    // state->m_angle[1] += gyro_y * dt; 
 }

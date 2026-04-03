@@ -81,9 +81,10 @@ void init_espnow(void)
     gpio_set_level(BLINK_GPIO, 1);
 }
 
-void get_control_inputs(float *out_throttle, float *out_roll, float *out_pitch) 
+void get_control_inputs(State *drone_state) 
 {
-    *out_throttle = throttle;
-    *out_roll     = roll;
-    *out_pitch    = pitch;
+    drone_state->throttle = throttle;
+    drone_state->d_angle[0] = roll;
+    drone_state->d_angle[1] = pitch;
+    // *drone_state->d_angle[2] = yaw; 
 }

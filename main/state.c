@@ -2,12 +2,14 @@
 
 void init_state(State *state) 
 {
+    state->throttle = 0.0f;
     for (int i = 0; i < 3; i++) {
         state->d_angle[i] = 0.0f;
         state->m_angle[i] = 0.0f;
         state->k_angle[i] = 0.0f;
         state->angular_velocity[i] = 0.0f;
         state->acceleration[i] = 0.0f;
+        state->pid_error[i] = 0.0f;
     }
 }
 

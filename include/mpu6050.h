@@ -25,7 +25,7 @@ esp_err_t mpu6050_register_write(i2c_master_dev_handle_t dev_handle, uint8_t reg
 void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_t *dev_handle);
 
 /**
- * @brief Calibration function for MPU6050, calculates offsets for accelerometer and gyroscope.
+ * @brief Calibration function for MPU6050, calculates offsets for accelerometer mesurements.
  *        !!!Requires stable platform. 
  */
 void mpu6050_calibrate(i2c_master_dev_handle_t dev_handle, uint8_t *data);

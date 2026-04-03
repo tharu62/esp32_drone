@@ -18,11 +18,11 @@
 #include "driver/i2c_master.h"
 
 #include "state.h"
-#include "mpu6050.h"
+#include "input_receiver.h"
 #include "angle_controller.h"
 #include "motor_controller.h"
+#include "mpu6050.h"
 #include "kalman_filter.h"
-#include "input_receiver.h"
 
 static const char *TAG = "drone";
 
@@ -42,26 +42,22 @@ void app_main(void)
     ESP_LOGI(TAG, "I2C initialized successfully");
 
     State drone_state;
-    init_state(&drone_state); // Zeroes roll and pitch angles
+    init_state(&drone_state);
     
     mpu6050_setup(dev_handle, data);
-    mpu6050_calibrate(dev_handle, data); // Calibrate sensor to get accurate readings
+    // mpu6050_calibrate(dev_handle, data);
     
     angle_controller_init();
     motor_controller_init();
-    // reset_kalman_filter();
+    // reset_kalman_filter(); 
     
     // init_espnow();
 
     ESP_LOGI(TAG, "Drone ON.");
-
-    float throttle = 0.0f;                         // Throttle input from user (0-100%)
-    float desired_angles[3] = {0.0f, 0.0f, 0.0f};  // Angles given by user (roll, pitch, yaw)
-    float pid_angle_error[3] = {0.0f, 0.0f, 0.0f}; // Placeholder for angle controller outputs
     
-    // Time step for control loop in microseconds (1000 us = 1 ms => 1 KHz control loop)
-    int64_t dt = 1000; 
-    float dt_sec = 0.0f; // Convert dt to seconds for use in calculations
+    // Time step for control loop in microseconds (5 us = 0.005 ms => 200 kHz control loop)
+    const int64_t dt = 5; 
+    float dt_sec = 0.0f;
     int64_t t_start, t_end = 0.0f;
     t_start = esp_timer_get_time(); // Get current time in microseconds
     // MAIN CONTROL LOOP
@@ -74,35 +70,37 @@ void app_main(void)
 
         if ((t_end - t_start) >= dt) {
 
-            dt_sec = (float)(t_end - t_start) / 1000000.0f; // Calculate elapsed time in seconds
+            // Calculate elapsed time in seconds
+            dt_sec = (float)(t_end - t_start) / 1000000.0f; 
+
+            // Reset start time for next loop iteration
+            t_start = esp_timer_get_time();
 
             // Read Input from user (desired angles and throttle)
-            get_control_inputs(&throttle, &desired_angles[0], &desired_angles[1]);
+            get_control_inputs(&drone_state);
 
             // Exit loop if throttle is negative (used as a signal to stop)
-            if (throttle < 0.0f) break; 
+            if (drone_state.throttle < 0.0f) break; 
 
             // Run angle controller pid to get desired rotation rates
-            angle_pid_controller(desired_angles, &drone_state, dt_sec, pid_angle_error);
+            angle_pid_controller(&drone_state, dt_sec);
 
             //@todo : adding roll, pitch and yaw in the motor control logic.
             // Update motor speeds by pwm signals 
-            motor_controller(throttle, pid_angle_error);
+            motor_controller(&drone_state);
 
             // Read sensor data & Run Kalman filter to update state estimation
             mpu6050_update(dev_handle, bus_handle, data, &drone_state, dt_sec);
 
             // @todo : calibrate kalman filter parameters for better performance.
             kalman_filter(&drone_state, dt_sec); 
-
-            // Make sure to run at fixed time interval
-            t_start = esp_timer_get_time(); // Get current time in microseconds
         }
 #endif
     
 #ifdef DEBUG        
         printf("%f,%f,%f\n", drone_state.k_angle[0], drone_state.k_angle[1], drone_state.k_angle[2]);
-        // printf("%f\n", throttle);
+        // printf("%f\n", drone_state.throttle);
+        // printf("%f\n", dt_sec);
         // printf("looping...\n");
         // vTaskDelay((500) / portTICK_PERIOD_MS); // Delay to maintain loop timing
 #endif

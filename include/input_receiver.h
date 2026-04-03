@@ -8,6 +8,7 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "driver/gpio.h"
+#include "state.h"
 
 /**
  * @brief Callback function to handle received ESP-NOW packets containing 
@@ -24,6 +25,6 @@ void init_espnow();
 /**
  * @brief Retrieves the latest control inputs received via ESP-NOW.
  */
-void get_control_inputs(float *out_throttle, float *out_roll, float *out_pitch);
+void get_control_inputs(State *drone_state);
 
 #endif // INPUT_RECEIVER_H

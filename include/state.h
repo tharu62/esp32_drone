@@ -2,11 +2,13 @@
 #define STATE_H
 
 typedef struct {
-    float d_angle[2];           // Desired angles: roll, pitch, yaw
-    float m_angle[2];           // Measured angles from accelerometer: roll, pitch, yaw 
-    float k_angle[2];           // Kalman filtered angles: roll, pitch, yaw
+    float throttle;
+    float d_angle[3];           // Desired angles: roll, pitch, yaw
+    float m_angle[3];           // Measured angles from accelerometer: roll, pitch, yaw 
+    float k_angle[3];           // Kalman filtered angles: roll, pitch, yaw
     float angular_velocity[3];  // Angular velocity from gyroscope: roll rate, pitch rate, yaw rate
     float acceleration[3];      // Acceleration from accelerometer: ax, ay, az
+    float pid_error[3];         // PID error for angle control: roll, pitch, yaw
 } State;
 
 void init_state(State *state);
