@@ -1,7 +1,6 @@
 #include "input_receiver.h"
 
 #define DRONE_TAG "ESP_NOW_DRONE"
-
 #define BLINK_GPIO 21
 
 
@@ -10,9 +9,9 @@
  */
 static const uint8_t DRONE_MAC[6] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
-float throttle = 0.0f;
-float roll = 0.0f;
-float pitch = 0.0f;
+static float throttle = 0.0f;
+static float roll = 0.0f;
+static float pitch = 0.0f;
 
 typedef struct __attribute__((packed)) 
 {

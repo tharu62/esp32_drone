@@ -5,7 +5,7 @@
 ## Overview
 
 This project desribes the configuration and setup of a quadcopter drone.
-The drone is runnig with an ESP32 microcontroller, a MPU6050 sensor and 4 brushless motors controlled by compatible ESCs. It is controlled by remote with a custom made joystick that
+The drone is runnig with an ESP32 microcontroller, a MPU6050 sensor and 4 brushless motors controlled by compatible ESCs. The drone is controlled by remote with a custom made joystick that
 uses ESP-NOW communication. 
 
 ## How to use example
@@ -39,11 +39,11 @@ To run this project, you should at least have an Espressif development board bas
 
 |  ESC SIGNAL PIN | MOTOR A  | MOTOR B | MOTOR C | MOTOR D | 
 | --------------- | -------- | ------- | ------- | ------- |
-| ESP32 MOTOR PWM | GPIOXX   | GPIOXX  | GPIOXX  | GPIOXX  |
+| ESP32 MOTOR PWM | GPIO01   | GPIO04  | GPIO38  | GPIO03  |
 
 
 
-**Note:** There's no need to add an external pull-up resistors for any pin, because the driver will enable the internal pull-up resistors.
+**Note:** There's no need to add an external pull-up resistors for any pin, because the driver will enable the internal pull-up resistors of the esp32.
 
 ### Build and Flash
 

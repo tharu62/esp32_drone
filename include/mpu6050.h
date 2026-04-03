@@ -17,7 +17,7 @@ esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev_handle, uint8_t reg_
 /**
  * @brief Write 1 byte to a MPU6050 sensor register at address <reg_addr> into <data>.
  */
-esp_err_t mpu6050_register_write_byte(i2c_master_dev_handle_t dev_handle, uint8_t reg_addr, uint8_t data);
+esp_err_t mpu6050_register_write(i2c_master_dev_handle_t dev_handle, uint8_t reg_addr, uint8_t data);
 
 /**
  * @brief i2c master bus initialization
