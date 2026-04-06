@@ -44,8 +44,8 @@ void app_main(void)
     State drone_state;
     init_state(&drone_state);
     
-    mpu6050_setup(dev_handle, data);
-    // mpu6050_calibrate(dev_handle, data);
+    mpu6050_setup(dev_handle);
+    // mpu6050_calibrate(dev_handle);
     
     angle_controller_init();
     motor_controller_init();
@@ -62,7 +62,6 @@ void app_main(void)
     t_start = esp_timer_get_time(); // Get current time in microseconds
     // MAIN CONTROL LOOP
     while (true) {
-
 #ifdef MAIN_LOOP        
 
         // Get current time in microseconds at the end of the loop to calculate elapsed time
@@ -90,7 +89,7 @@ void app_main(void)
             motor_controller(&drone_state);
 
             // Read sensor data & Run Kalman filter to update state estimation
-            mpu6050_update(dev_handle, bus_handle, data, &drone_state, dt_sec);
+            mpu6050_update(dev_handle, bus_handle, &drone_state, dt_sec);
 
             // @todo : calibrate kalman filter parameters for better performance.
             kalman_filter(&drone_state, dt_sec); 
@@ -98,7 +97,7 @@ void app_main(void)
 #endif
     
 #ifdef DEBUG        
-        printf("%f,%f,%f\n", drone_state.k_angle[0], drone_state.k_angle[1], drone_state.k_angle[2]);
+        printf("%f,%f,%f\n", drone_state.m_angle[0], drone_state.m_angle[1], drone_state.m_angle[2]);
         // printf("%f\n", drone_state.throttle);
         // printf("%f\n", dt_sec);
         // printf("looping...\n");

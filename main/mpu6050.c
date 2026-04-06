@@ -48,8 +48,9 @@ void i2c_master_init(i2c_master_bus_handle_t *bus, i2c_master_dev_handle_t *dev)
     ESP_ERROR_CHECK(i2c_master_bus_add_device(*bus, &dev_cfg, dev));
 }
 
-void mpu6050_setup(i2c_master_dev_handle_t dev, uint8_t *data)
+void mpu6050_setup(i2c_master_dev_handle_t dev)
 {
+    uint8_t data[10] = {0};
     // ESP_ERROR_CHECK(mpu6050_register_write(dev, MPU6050_PWR_MGMT_1_REG_ADDR, 0x00));
     while(mpu6050_register_write(dev, MPU6050_PWR_MGMT_1_REG_ADDR, 0x00) != ESP_OK){
         ESP_LOGI("MPU6050", "Failed to wake up MPU6050, retrying...");
@@ -66,8 +67,9 @@ void mpu6050_setup(i2c_master_dev_handle_t dev, uint8_t *data)
 }
 
 
-void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
+void mpu6050_calibrate(i2c_master_dev_handle_t dev)
 {
+    uint8_t data[10] = {0};
     ESP_LOGI("MPU6050", "Calibrating... keep sensor still");
 
     for (int i = 0; i < 2000; i++) {
@@ -76,24 +78,25 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, uint8_t *data)
         int16_t ay = (data[2] << 8) | data[3];
         int16_t az = (data[4] << 8) | data[5];
 
-        ACCEL_OFFSET_X += (float)ax / 16384.0f; 
-        ACCEL_OFFSET_Y += (float)ay / 16384.0f; 
-        ACCEL_OFFSET_Z += (float)az / 16384.0f; 
+        ACCEL_OFFSET_X += (float)ax; 
+        ACCEL_OFFSET_Y += (float)ay; 
+        ACCEL_OFFSET_Z += (float)az; 
 
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 
-    ACCEL_OFFSET_X /= 100.0f;
-    ACCEL_OFFSET_Y /= 100.0f;
-    ACCEL_OFFSET_Z /= 100.0f;
+    ACCEL_OFFSET_X /= 2000.0f;
+    ACCEL_OFFSET_Y /= 2000.0f;
+    ACCEL_OFFSET_Z /= 2000.0f;
 
     ESP_LOGI("MPU6050", "Calibration done");
 }
 
 
-void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, uint8_t *data, State *state, float dt)
+void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, State *state, float dt)
 {
 
+    uint8_t data[10] = {0};
     while (mpu6050_register_read(dev, MPU6050_ACCEL_REG_ADDR, data, 6) != ESP_OK) {
         i2c_master_bus_reset(bus);
     }
@@ -102,9 +105,17 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, ui
     int16_t ay = (data[2] << 8) | data[3];
     int16_t az = (data[4] << 8) | data[5];
 
-    float xg = (float)ax / 16384.0f - ACCEL_OFFSET_X;
-    float yg = (float)ay / 16384.0f - ACCEL_OFFSET_Y;
-    float zg = (float)az / 16384.0f - ACCEL_OFFSET_Z;
+    float xg = ((float)ax - ACCEL_OFFSET_X) / 16384.0f; 
+    float yg = ((float)ay - ACCEL_OFFSET_Y) / 16384.0f;
+    float zg = ((float)az - ACCEL_OFFSET_Z) / 16384.0f;
+
+    float accel_magnitude = sqrtf(xg * xg + yg * yg + zg * zg);
+    // Avoid division by near-zero
+    if (accel_magnitude >= 0.01f) {  
+        xg /= accel_magnitude;
+        yg /= accel_magnitude;
+        zg /= accel_magnitude;
+    }
 
     state->acceleration[0] = xg;
     state->acceleration[1] = yg;

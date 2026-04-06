@@ -28,7 +28,7 @@ void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_
  * @brief Calibration function for MPU6050, calculates offsets for accelerometer mesurements.
  *        !!!Requires stable platform. 
  */
-void mpu6050_calibrate(i2c_master_dev_handle_t dev_handle, uint8_t *data);
+void mpu6050_calibrate(i2c_master_dev_handle_t dev_handle);
 
 /**
  * @brief Setup function for MPU6050 by :
@@ -38,12 +38,12 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev_handle, uint8_t *data);
  *       4. Configure the accelerometer range. (±2g)
  *       5. Configure the gyroscope range. (250°/s)
  */
-void mpu6050_setup(i2c_master_dev_handle_t dev_handle, uint8_t *data);
+void mpu6050_setup(i2c_master_dev_handle_t dev_handle);
 
 /**
  * @brief Read accelerometer and gyroscope data from MPU6050, apply calibration offsets, 
  *        and update the state with accelerations and angular velocities.
  */
-void mpu6050_update(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, uint8_t *data, State *state, float dt);
+void mpu6050_update(i2c_master_dev_handle_t dev_handle, i2c_master_bus_handle_t bus_handle, State *state, float dt);
 
 #endif // MPU6050_H
