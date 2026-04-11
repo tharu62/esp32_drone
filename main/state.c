@@ -9,7 +9,7 @@ void init_state(State *state)
         state->k_angle[i] = 0.0f;
         state->angular_velocity[i] = 0.0f;
         state->acceleration[i] = 0.0f;
-        state->pid_error[i] = 0.0f;
+        state->pid_output[i] = 0.0f;
     }
 }
 

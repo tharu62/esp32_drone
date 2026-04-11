@@ -74,18 +74,18 @@ void motor_controller_init(void)
 
 
 // @todo : adding roll, pitch and yaw in the motor control logic.
-void motor_controller(State *drone_state)
+void motor_controller(State *ds)
 {
 
-    motor_pwm[0] = drone_state->throttle * 100.f; 
-    motor_pwm[1] = drone_state->throttle * 100.f; 
-    motor_pwm[2] = drone_state->throttle * 100.f; 
-    motor_pwm[3] = drone_state->throttle * 100.f;  
+    motor_pwm[0] = ds->throttle * 100.f; 
+    motor_pwm[1] = ds->throttle * 100.f; 
+    motor_pwm[2] = ds->throttle * 100.f; 
+    motor_pwm[3] = ds->throttle * 100.f;  
 
-    // motor_pwm[0] = ( pid_angle_error[0] + pid_angle_error[1] - pid_angle_error[2] + throttle) * 100.f; // M1 
-    // motor_pwm[1] = (-pid_angle_error[0] + pid_angle_error[1] + pid_angle_error[2] + throttle) * 100.f; // M2 
-    // motor_pwm[2] = (-pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle) * 100.f; // M3
-    // motor_pwm[3] = ( pid_angle_error[0] - pid_angle_error[1] + pid_angle_error[2] + throttle) * 100.f; // M4
+    // motor_pwm[0] = (( ds->pid_output[0] + ds->pid_output[1] - ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M1 
+    // motor_pwm[1] = ((-ds->pid_output[0] + ds->pid_output[1] + ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M2 
+    // motor_pwm[2] = ((-ds->pid_output[0] - ds->pid_output[1] + ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M3
+    // motor_pwm[3] = (( ds->pid_output[0] - ds->pid_output[1] + ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M4
 
     for (int i = 0; i < MOTOR_COUNT; i++) {
 
@@ -96,12 +96,7 @@ void motor_controller(State *drone_state)
         // Convert %[0,100] → duty[0,16383] with correct scaling and offset for ESC
         uint32_t duty = min_duty + (uint32_t)((motor_pwm[i] * duty_range) / 100.0f);
 
-        ESP_ERROR_CHECK(
-            ledc_set_duty(PWM_MODE, motor_channel[i], duty)
-        );
-
-        ESP_ERROR_CHECK(
-            ledc_update_duty(PWM_MODE, motor_channel[i])
-        );
+        ESP_ERROR_CHECK( ledc_set_duty(PWM_MODE, motor_channel[i], duty));
+        ESP_ERROR_CHECK( ledc_update_duty(PWM_MODE, motor_channel[i]));
     }
 }

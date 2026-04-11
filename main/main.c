@@ -1,9 +1,4 @@
-/*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
- * SPDX-License-Identifier: Unlicense OR CC0-1.0
-*/
-
-/* Simple Firmaware for ESP32
+/* Simple Firmaware for ESP32 DRONE CONTROLLER
 
    This code initializes the I2C bus and communicates with a MPU6050 sensor
    to read accelerometer and gyroscope data in a loop. 
@@ -48,7 +43,7 @@ void app_main(void)
     
     angle_controller_init();
     motor_controller_init();
-    // reset_kalman_filter(); 
+    // reset_kalman_filter(); // unused
     
     // init_espnow();
 
@@ -59,7 +54,7 @@ void app_main(void)
     float dt_sec = 0.0f;
     int64_t t_start, t_end = 0.0f;
     t_start = esp_timer_get_time(); // Get current time in microseconds
-    // MAIN CONTROL LOOP
+    // ************* MAIN CONTROL LOOP ****************
     while (true) {
 #ifdef MAIN_LOOP        
 
@@ -103,6 +98,7 @@ void app_main(void)
         // vTaskDelay((500) / portTICK_PERIOD_MS); // Delay to maintain loop timing
 #endif
     }
+    // ***********************************************
 
     // Cleanup
     // ESP_ERROR_CHECK(mpu6050_register_write(dev_handle, MPU6050_PWR_MGMT_1_REG_ADDR, 1 << MPU6050_RESET_BIT)); /* Resetting the MPU6050 */

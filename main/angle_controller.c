@@ -1,44 +1,76 @@
+#include <math.h>
 #include "angle_controller.h"
 
-#define P_ROLL_ANGLE 0.016f
-#define I_ROLL_ANGLE 0.1f
-#define D_ROLL_ANGLE 0.05f
+// Angle PID (outer loop)
+#define ANGLE_KP_ROLL   4.0f
+#define ANGLE_KP_PITCH  4.0f
 
-#define P_PITCH_ANGLE 0.016f
-#define I_PITCH_ANGLE 0.1f
-#define D_PITCH_ANGLE 0.05f
+// Rate PID (inner loop)
+#define RATE_KP_ROLL    0.08f
+#define RATE_KI_ROLL    0.04f
+#define RATE_KD_ROLL    0.002f
 
-float previous_roll_angle_error = 0.0f;
-float previous_pitch_angle_error = 0.0f;
+#define RATE_KP_PITCH   0.08f
+#define RATE_KI_PITCH   0.04f
+#define RATE_KD_PITCH   0.002f
 
-float roll_angle_integral = 0.0f;
-float pitch_angle_integral = 0.0f;
+#define I_LIMIT         0.3f
+#define OUTPUT_LIMIT    1.0f
 
-void angle_controller_init(void) 
+
+static float roll_rate_integral = 0.0f;
+static float pitch_rate_integral = 0.0f;
+
+
+void angle_controller_init(void)
 {
-    previous_roll_angle_error = 0.0f;
-    previous_pitch_angle_error = 0.0f;
-    roll_angle_integral = 0.0f;
-    pitch_angle_integral = 0.0f;
-    return;
+    roll_rate_integral = 0.0f;
+    pitch_rate_integral = 0.0f;
 }
 
-void angle_pid_controller(State* drone_state, float dt)
-{
 
-    float roll_angle_error  = drone_state->d_angle[0] - drone_state->k_angle[0];
-    float pitch_angle_error = drone_state->d_angle[1] - drone_state->k_angle[1];
-    float yaw_angle_error   = drone_state->d_angle[2] - drone_state->k_angle[2];
-    roll_angle_integral  +=  previous_roll_angle_error;
-    pitch_angle_integral +=  previous_pitch_angle_error;
-    
-    float roll_angle_derivative  = (roll_angle_error  - previous_roll_angle_error ) / dt;
-    float pitch_angle_derivative = (pitch_angle_error - previous_pitch_angle_error) / dt;
-    
-    drone_state->pid_error[0] = P_ROLL_ANGLE  * roll_angle_error  + I_ROLL_ANGLE  * roll_angle_integral  + D_ROLL_ANGLE  * roll_angle_derivative;
-    drone_state->pid_error[1] = P_PITCH_ANGLE * pitch_angle_error + I_PITCH_ANGLE * pitch_angle_integral + D_PITCH_ANGLE * pitch_angle_derivative;
-    
-    previous_roll_angle_error  = roll_angle_error;
-    previous_pitch_angle_error = pitch_angle_error;
-    return;
+void angle_pid_controller(State* s, float dt)
+{
+    // new angle error 
+    float roll_error  = s->d_angle[0] - s->k_angle[0];
+    float pitch_error = s->d_angle[1] - s->k_angle[1];
+
+    // initial roll and pitch rate setpoints from angle error,
+    // the KP values determine how aggressively the controller 
+    // tries to correct angle errors by setting rate targets, 
+    // higher KP means more aggressive correction, but can lead to instability if too high.
+    float roll_rate_setpoint  = ANGLE_KP_ROLL  * roll_error;
+    float pitch_rate_setpoint = ANGLE_KP_PITCH * pitch_error;
+
+    // measured angular velocities
+    float roll_rate_error  = roll_rate_setpoint  - s->angular_velocity[0];
+    float pitch_rate_error = pitch_rate_setpoint - s->angular_velocity[1];
+
+    // integrate angular velocities
+    roll_rate_integral  += roll_rate_error  * dt;
+    pitch_rate_integral += pitch_rate_error * dt;
+
+    // anti-windup [-0.3, 0.3] deg/sec
+    if (roll_rate_integral > I_LIMIT) roll_rate_integral = I_LIMIT;
+    if (roll_rate_integral < -I_LIMIT) roll_rate_integral = -I_LIMIT;
+    if (pitch_rate_integral > I_LIMIT) pitch_rate_integral = I_LIMIT;
+    if (pitch_rate_integral < -I_LIMIT) pitch_rate_integral = -I_LIMIT;
+
+    // derivative (using negative measured rate for better response)
+    float roll_derivative  = -s->angular_velocity[0];
+    float pitch_derivative = -s->angular_velocity[1];
+
+    // upate PID outputs for roll and pitch
+    float roll_output = RATE_KP_ROLL * roll_rate_error + RATE_KI_ROLL * roll_rate_integral + RATE_KD_ROLL * roll_derivative;
+    float pitch_output = RATE_KP_PITCH * pitch_rate_error + RATE_KI_PITCH * pitch_rate_integral + RATE_KD_PITCH * pitch_derivative;
+
+    // output limits to prevent excessive control signals [-1.0, 1.0] degree/sec
+    if (roll_output > OUTPUT_LIMIT) roll_output = OUTPUT_LIMIT;
+    if (roll_output < -OUTPUT_LIMIT) roll_output = -OUTPUT_LIMIT;
+    if (pitch_output > OUTPUT_LIMIT) pitch_output = OUTPUT_LIMIT;
+    if (pitch_output < -OUTPUT_LIMIT) pitch_output = -OUTPUT_LIMIT;
+
+    // update the state with the PID outputs for roll and pitch
+    s->pid_output[0] = roll_output;
+    s->pid_output[1] = pitch_output;
 }
