@@ -35,7 +35,6 @@ static const char *TAG = "drone";
  */
 void app_main(void)
 {
-    uint8_t data[10]; // Buffer for I2C data, oversized for safety.
     i2c_master_bus_handle_t bus_handle;
     i2c_master_dev_handle_t dev_handle;
     i2c_master_init(&bus_handle, &dev_handle);
@@ -45,7 +44,7 @@ void app_main(void)
     init_state(&drone_state);
     
     mpu6050_setup(dev_handle);
-    // mpu6050_calibrate(dev_handle);
+    // mpu6050_calibrate(dev_handle); // unused
     
     angle_controller_init();
     motor_controller_init();
@@ -88,16 +87,16 @@ void app_main(void)
             // Update motor speeds by pwm signals 
             motor_controller(&drone_state);
 
-            // Read sensor data & Run Kalman filter to update state estimation
+            // Read sensor data from MPU6050 and update drone state
             mpu6050_update(dev_handle, bus_handle, &drone_state, dt_sec);
 
-            // @todo : calibrate kalman filter parameters for better performance.
+            // Run Kalman filter to update state estimation
             kalman_filter(&drone_state, dt_sec); 
         }
 #endif
     
 #ifdef DEBUG        
-        printf("%f,%f,%f\n", drone_state.m_angle[0], drone_state.m_angle[1], drone_state.m_angle[2]);
+        printf("%f,%f,%f\n", drone_state.k_angle[0], drone_state.k_angle[1], drone_state.k_angle[2]);
         // printf("%f\n", drone_state.throttle);
         // printf("%f\n", dt_sec);
         // printf("looping...\n");

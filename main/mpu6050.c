@@ -72,7 +72,7 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev)
     uint8_t data[10] = {0};
     ESP_LOGI("MPU6050", "Calibrating... keep sensor still");
 
-    for (int i = 0; i < 2000; i++) {
+    for (int i = 0; i < 1000; i++) {
         ESP_ERROR_CHECK(mpu6050_register_read(dev, MPU6050_ACCEL_REG_ADDR, data, 6));
         int16_t ax = (data[0] << 8) | data[1];
         int16_t ay = (data[2] << 8) | data[3];
@@ -82,12 +82,12 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev)
         ACCEL_OFFSET_Y += (float)ay; 
         ACCEL_OFFSET_Z += (float)az; 
 
-        vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(pdMS_TO_TICKS(10)); // 10 ms delay between samples for calibration
     }
 
-    ACCEL_OFFSET_X /= 2000.0f;
-    ACCEL_OFFSET_Y /= 2000.0f;
-    ACCEL_OFFSET_Z /= 2000.0f;
+    ACCEL_OFFSET_X /= 1000.0f;
+    ACCEL_OFFSET_Y /= 1000.0f;
+    ACCEL_OFFSET_Z /= 1000.0f;
 
     ESP_LOGI("MPU6050", "Calibration done");
 }
@@ -109,13 +109,13 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, St
     float yg = ((float)ay - ACCEL_OFFSET_Y) / 16384.0f;
     float zg = ((float)az - ACCEL_OFFSET_Z) / 16384.0f;
 
-    float accel_magnitude = sqrtf(xg * xg + yg * yg + zg * zg);
+    // float accel_magnitude = sqrtf(xg * xg + yg * yg + zg * zg);
     // Avoid division by near-zero
-    if (accel_magnitude >= 0.01f) {  
-        xg /= accel_magnitude;
-        yg /= accel_magnitude;
-        zg /= accel_magnitude;
-    }
+    // if (accel_magnitude >= 0.01f) {  
+    //     xg /= accel_magnitude;
+    //     yg /= accel_magnitude;
+    //     zg /= accel_magnitude;
+    // }
 
     state->acceleration[0] = xg;
     state->acceleration[1] = yg;
