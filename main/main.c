@@ -17,13 +17,12 @@
 #include "angle_controller.h"
 #include "motor_controller.h"
 #include "mpu6050.h"
-#include "kalman_filter.h"
+#include "filter.h"
 
 static const char *TAG = "drone";
 
 #define MAIN_LOOP // Comment this out to disable main control loop (for testing...)
 #define DEBUG     // Comment this out to disable debug features (MPU6050, PID, Kalman filter)
-
 
 /**
  * @brief Main application
@@ -38,12 +37,14 @@ void app_main(void)
     State drone_state;
     init_state(&drone_state);
     
+    EKF ekf;
+    init_ekf(&ekf);
+    
     mpu6050_setup(dev_handle);
-    // mpu6050_calibrate(dev_handle); // unused
+    mpu6050_calibrate(dev_handle, &ekf); 
     
     angle_controller_init();
     motor_controller_init();
-    // reset_kalman_filter(); // unused
     
     // init_espnow();
 
@@ -63,10 +64,8 @@ void app_main(void)
 
         if ((t_end - t_start) >= dt) {
 
-            // Calculate elapsed time in seconds
+            // Calculate elapsed time in seconds and reset start time for next loop iteration
             dt_sec = (float)(t_end - t_start) / 1000000.0f; 
-
-            // Reset start time for next loop iteration
             t_start = esp_timer_get_time();
 
             // Read Input from user (desired angles and throttle)
@@ -78,7 +77,7 @@ void app_main(void)
             // Run angle controller pid to get desired rotation rates
             angle_pid_controller(&drone_state, dt_sec);
 
-            //@todo : adding roll, pitch and yaw in the motor control logic.
+            //@todo : adding roll, pitch and yaw in the motor control logic...
             // Update motor speeds by pwm signals 
             motor_controller(&drone_state);
 
@@ -86,7 +85,8 @@ void app_main(void)
             mpu6050_update(dev_handle, bus_handle, &drone_state, dt_sec);
 
             // Run Kalman filter to update state estimation
-            kalman_filter(&drone_state, dt_sec); 
+            kalman_filter(&drone_state, &ekf, dt_sec); 
+            // complementary_filter(&drone_state, dt_sec); 
         }
 #endif
     

@@ -43,8 +43,8 @@ void angle_pid_controller(State* s, float dt)
     float pitch_rate_setpoint = ANGLE_KP_PITCH * pitch_error;
 
     // measured angular velocities
-    float roll_rate_error  = roll_rate_setpoint  - s->angular_velocity[0];
-    float pitch_rate_error = pitch_rate_setpoint - s->angular_velocity[1];
+    float roll_rate_error  = roll_rate_setpoint  - s->w[0];
+    float pitch_rate_error = pitch_rate_setpoint - s->w[1];
 
     // integrate angular velocities
     roll_rate_integral  += roll_rate_error  * dt;
@@ -57,8 +57,8 @@ void angle_pid_controller(State* s, float dt)
     if (pitch_rate_integral < -I_LIMIT) pitch_rate_integral = -I_LIMIT;
 
     // derivative (using negative measured rate for better response)
-    float roll_derivative  = -s->angular_velocity[0];
-    float pitch_derivative = -s->angular_velocity[1];
+    float roll_derivative  = -s->w[0];
+    float pitch_derivative = -s->w[1];
 
     // upate PID outputs for roll and pitch
     float roll_output = RATE_KP_ROLL * roll_rate_error + RATE_KI_ROLL * roll_rate_integral + RATE_KD_ROLL * roll_derivative;

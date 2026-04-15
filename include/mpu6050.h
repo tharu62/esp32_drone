@@ -8,6 +8,7 @@
 #include "driver/i2c_master.h"
 #include "esp_timer.h"
 #include "state.h"
+#include "filter.h"
 
 /**
  * @brief Read <len> bytes from a MPU6050 sensor registers at address <reg_addr> and write them into <data>.
@@ -28,7 +29,7 @@ void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_
  * @brief Calibration function for MPU6050, calculates offsets for accelerometer mesurements.
  *        !!!Requires stable platform. 
  */
-void mpu6050_calibrate(i2c_master_dev_handle_t dev_handle);
+void mpu6050_calibrate(i2c_master_dev_handle_t dev_handle, EKF* ekf);
 
 /**
  * @brief Setup function for MPU6050 by :
