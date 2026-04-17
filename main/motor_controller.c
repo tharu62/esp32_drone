@@ -16,6 +16,9 @@
 #define ESC_MAX_US 2000     // 2ms (100% throttle)
 #define ESC_PERIOD_US 20000 // 20 ms (50 Hz)
 
+#define MOTOR_MIN 0.0f
+#define MOTOR_MAX 1.0f
+
 static const int motor_gpio[MOTOR_COUNT] = {
     PWM_GPIO_M1,
     PWM_GPIO_M2,
@@ -29,8 +32,6 @@ static const ledc_channel_t motor_channel[MOTOR_COUNT] = {
     LEDC_CHANNEL_2,
     LEDC_CHANNEL_3
 };
-
-float motor_pwm[MOTOR_COUNT];   // 0–100 %
 
 /* Convert microseconds to LEDC duty */
 static uint32_t us_to_duty(uint32_t pulse_width_us)
@@ -72,31 +73,64 @@ void motor_controller_init(void)
     }
 }
 
+static inline float clampf(float x, float min, float max)
+{
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
+}
 
-// @todo : adding roll, pitch and yaw in the motor control logic.
 void motor_controller(State *ds)
 {
+    float M[4];
 
-    motor_pwm[0] = ds->throttle * 100.f; 
-    motor_pwm[1] = ds->throttle * 100.f; 
-    motor_pwm[2] = ds->throttle * 100.f; 
-    motor_pwm[3] = ds->throttle * 100.f;  
+    float roll  = ds->pid_output[0];
+    float pitch = ds->pid_output[1];
+    float yaw   = ds->pid_output[2];
+    float throttle = ds->throttle;
 
-    // motor_pwm[0] = (( ds->pid_output[0] + ds->pid_output[1] - ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M1 
-    // motor_pwm[1] = ((-ds->pid_output[0] + ds->pid_output[1] + ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M2 
-    // motor_pwm[2] = ((-ds->pid_output[0] - ds->pid_output[1] + ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M3
-    // motor_pwm[3] = (( ds->pid_output[0] - ds->pid_output[1] + ds->pid_output[2] + ds->throttle)/ 2.0f) * 100.f; // M4
+    M[0] = throttle + roll + pitch - yaw;
+    M[1] = throttle - roll + pitch + yaw;
+    M[2] = throttle - roll - pitch + yaw;
+    M[3] = throttle + roll - pitch + yaw;
+
+    float max = M[0];
+    float min = M[0];
+    for (int i = 1; i < 4; i++) {
+        if (M[i] > max) max = M[i];
+        if (M[i] < min) min = M[i];
+    }
+
+    float range_above = max - MOTOR_MAX;
+    float range_below = MOTOR_MIN - min;
+
+    float correction = 0.0f;
+
+    if (range_above > 0.0f) {
+        correction = range_above;
+    } 
+    else if (range_below > 0.0f) {
+        correction = -range_below;
+    }
+
+    if (correction != 0.0f) {
+        roll  -= correction * 0.25f;
+        pitch -= correction * 0.25f;
+        yaw   -= correction * 0.25f;
+
+        M[0] = throttle + roll + pitch - yaw;
+        M[1] = throttle - roll + pitch + yaw;
+        M[2] = throttle - roll - pitch + yaw;
+        M[3] = throttle + roll - pitch + yaw;
+    }
 
     for (int i = 0; i < MOTOR_COUNT; i++) {
 
-        // Proper clamping
-        if (motor_pwm[i] < 0.0f) motor_pwm[i] = 0.0f;
-        if (motor_pwm[i] > 100.0f) motor_pwm[i] = 100.0f;
+        M[i] = clampf(M[i], MOTOR_MIN, MOTOR_MAX);
+        
+        uint32_t duty = min_duty + (uint32_t)(M[i] * duty_range);
 
-        // Convert %[0,100] → duty[0,16383] with correct scaling and offset for ESC
-        uint32_t duty = min_duty + (uint32_t)((motor_pwm[i] * duty_range) / 100.0f);
-
-        ESP_ERROR_CHECK( ledc_set_duty(PWM_MODE, motor_channel[i], duty));
-        ESP_ERROR_CHECK( ledc_update_duty(PWM_MODE, motor_channel[i]));
+        ESP_ERROR_CHECK(ledc_set_duty(PWM_MODE, motor_channel[i], duty));
+        ESP_ERROR_CHECK(ledc_update_duty(PWM_MODE, duty));
     }
 }

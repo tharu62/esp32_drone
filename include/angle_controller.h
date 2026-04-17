@@ -4,13 +4,14 @@
 #ifndef ANGLE_CONTROLLER_H
 #define ANGLE_CONTROLLER_H
 
+#include <math.h>
 #include "state.h"
 
 /**
  * @brief Initializes the pid integral temrs and previous error values to zero.
  * This should be called once at the start of the program to ensure the controller starts with a clean state.
  */
-void angle_controller_init(void);
+void pid_init(void);
 
 /**
  * @brief Implements the PID controller for angle control.
@@ -19,6 +20,6 @@ void angle_controller_init(void);
  * @param drone_state Pointer to the drone's state.
  * @param dt Time step for the controller.
  */
-void angle_pid_controller(State* drone_state, float dt);
+void pid(State* drone_state, float dt);
 
 #endif // ANGLE_CONTROLLER_H

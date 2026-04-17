@@ -1,8 +1,8 @@
 #include "filter.h"
 
 #define Q_ANGLE 0.001f
-#define Q_BIAS 0.01f
-#define R_MEASURE 0.001f
+#define Q_BIAS 0.1f
+#define R_MEASURE 1.0f
 
 void init_ekf(EKF* ekf)
 {
@@ -12,20 +12,20 @@ void init_ekf(EKF* ekf)
     ekf->Qx[0] = Q_ANGLE;
     ekf->Qx[1] = Q_BIAS;
     ekf->Rx = R_MEASURE;
-    ekf->Px[0][0] = 0.0f;
-    ekf->Px[0][1] = 0.0f;
-    ekf->Px[1][0] = 0.0f;
-    ekf->Px[1][1] = 0.0f;
+    ekf->Px[0][0] = 1.0f;
+    ekf->Px[0][1] = 1.0f;
+    ekf->Px[1][0] = 1.0f;
+    ekf->Px[1][1] = 1.0f;
     ekf->Kx[0] = 0.0f;
     ekf->Kx[1] = 0.0f;
 
     ekf->Qy[0] = Q_ANGLE;
     ekf->Qy[1] = Q_BIAS;
     ekf->Ry = R_MEASURE;
-    ekf->Py[0][0] = 0.0f;
-    ekf->Py[0][1] = 0.0f;
-    ekf->Py[1][0] = 0.0f;
-    ekf->Py[1][1] = 0.0f;
+    ekf->Py[0][0] = 1.0f;
+    ekf->Py[0][1] = 1.0f;
+    ekf->Py[1][0] = 1.0f;
+    ekf->Py[1][1] = 1.0f;
     ekf->Ky[0] = 0.0f;
     ekf->Ky[1] = 0.0f;
 }

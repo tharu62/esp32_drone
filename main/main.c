@@ -43,7 +43,7 @@ void app_main(void)
     mpu6050_setup(dev_handle);
     mpu6050_calibrate(dev_handle, &ekf); 
     
-    angle_controller_init();
+    pid_init();
     motor_controller_init();
     
     // init_espnow();
@@ -68,6 +68,13 @@ void app_main(void)
             dt_sec = (float)(t_end - t_start) / 1000000.0f; 
             t_start = esp_timer_get_time();
 
+            // Read sensor data from MPU6050 and update drone state
+            mpu6050_update(dev_handle, bus_handle, &drone_state, dt_sec);
+
+            // Run Kalman filter to update state estimation
+            kalman_filter(&drone_state, &ekf, dt_sec); 
+            // complementary_filter(&drone_state, dt_sec); 
+
             // Read Input from user (desired angles and throttle)
             get_control_inputs(&drone_state);
 
@@ -75,18 +82,11 @@ void app_main(void)
             if (drone_state.throttle < 0.0f) break; 
 
             // Run angle controller pid to get desired rotation rates
-            angle_pid_controller(&drone_state, dt_sec);
+            pid(&drone_state, dt_sec);
 
             //@todo : adding roll, pitch and yaw in the motor control logic...
             // Update motor speeds by pwm signals 
             motor_controller(&drone_state);
-
-            // Read sensor data from MPU6050 and update drone state
-            mpu6050_update(dev_handle, bus_handle, &drone_state, dt_sec);
-
-            // Run Kalman filter to update state estimation
-            kalman_filter(&drone_state, &ekf, dt_sec); 
-            // complementary_filter(&drone_state, dt_sec); 
         }
 #endif
     
