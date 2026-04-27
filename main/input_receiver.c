@@ -12,12 +12,14 @@ static const uint8_t DRONE_MAC[6] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
 static float throttle = 0.0f;
 static float roll = 0.0f;
 static float pitch = 0.0f;
+static float yaw = 0.0f;
 
 typedef struct __attribute__((packed)) 
 {
     float throttle;
     float roll;
     float pitch;
+    float yaw;
 } message;
 
 // Callback for received ESP-NOW packets
@@ -31,6 +33,7 @@ void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     throttle = pkt.throttle;
     roll     = pkt.roll;
     pitch    = pkt.pitch;
+    yaw      = pkt.yaw;
 
     // Debug log for received control inputs 
     // ESP_LOGI(
@@ -86,5 +89,5 @@ void get_control_inputs(State *drone_state)
     drone_state->throttle = throttle;
     drone_state->d_angle[0] = roll;
     drone_state->d_angle[1] = pitch;
-    // *drone_state->d_angle[2] = yaw; 
+    // *drone_state->d_angle[2] = yaw; // unused for now
 }

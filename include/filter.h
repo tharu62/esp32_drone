@@ -4,6 +4,7 @@
 #include <math.h>
 #include "state.h"
 
+// KALMAN FILTER DATA STRUCTURE
 typedef struct {
     float bias[2]; // Gyro fixed bias
     
@@ -18,11 +19,11 @@ typedef struct {
     float Ry;       // Accelerometer covariance 
     float Py[2][2]; // Error covariance matrix
     float Ky[2];    // Kalman Gain
-} EKF;
+} KF;
 
-void init_ekf(EKF *ekf);
+void init_kf(KF *ekf);
  
-void kalman_filter(State* ds, EKF* ekf, float dt);
+void kalman_filter(State* ds, KF* kf, float dt);
 
 // void complementary_filter(State *ds, float dt);
 

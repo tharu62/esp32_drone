@@ -83,16 +83,21 @@ static inline float clampf(float x, float min, float max)
 void motor_controller(State *ds)
 {
     float M[4];
-
+    
     float roll  = ds->pid_output[0];
     float pitch = ds->pid_output[1];
     float yaw   = ds->pid_output[2];
     float throttle = ds->throttle;
+    
+    // M[0] = throttle + roll + pitch - yaw;
+    // M[1] = throttle - roll + pitch + yaw;
+    // M[2] = throttle - roll - pitch + yaw;
+    // M[3] = throttle + roll - pitch + yaw;
 
-    M[0] = throttle + roll + pitch - yaw;
-    M[1] = throttle - roll + pitch + yaw;
-    M[2] = throttle - roll - pitch + yaw;
-    M[3] = throttle + roll - pitch + yaw;
+    M[0] = throttle;
+    M[1] = throttle;
+    M[2] = throttle;
+    M[3] = throttle;
 
     float max = M[0];
     float min = M[0];
@@ -127,10 +132,13 @@ void motor_controller(State *ds)
     for (int i = 0; i < MOTOR_COUNT; i++) {
 
         M[i] = clampf(M[i], MOTOR_MIN, MOTOR_MAX);
-        
         uint32_t duty = min_duty + (uint32_t)(M[i] * duty_range);
 
         ESP_ERROR_CHECK(ledc_set_duty(PWM_MODE, motor_channel[i], duty));
-        ESP_ERROR_CHECK(ledc_update_duty(PWM_MODE, duty));
+        // ESP_ERROR_CHECK(ledc_update_duty(PWM_MODE, motor_channel[i]));
+    }
+
+    for(int i = 0; i < MOTOR_COUNT; i++) {
+        ESP_ERROR_CHECK(ledc_update_duty(PWM_MODE, motor_channel[i]));
     }
 }

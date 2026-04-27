@@ -75,7 +75,7 @@ void mpu6050_setup(i2c_master_dev_handle_t dev)
 }
 
 
-void mpu6050_calibrate(i2c_master_dev_handle_t dev, EKF* ekf)
+void mpu6050_calibrate(i2c_master_dev_handle_t dev, KF* ekf)
 {
     uint8_t data[10] = {0};
     ESP_LOGI("MPU6050", "Calibrating... keep sensor still");

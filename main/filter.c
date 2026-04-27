@@ -4,50 +4,50 @@
 #define Q_BIAS 0.1f
 #define R_MEASURE 1.0f
 
-void init_ekf(EKF* ekf)
+void init_kf(KF* kf)
 {
-    ekf->bias[0] = 0.0f;
-    ekf->bias[1] = 0.0f;
+    kf->bias[0] = 0.0f;
+    kf->bias[1] = 0.0f;
     
-    ekf->Qx[0] = Q_ANGLE;
-    ekf->Qx[1] = Q_BIAS;
-    ekf->Rx = R_MEASURE;
-    ekf->Px[0][0] = 1.0f;
-    ekf->Px[0][1] = 1.0f;
-    ekf->Px[1][0] = 1.0f;
-    ekf->Px[1][1] = 1.0f;
-    ekf->Kx[0] = 0.0f;
-    ekf->Kx[1] = 0.0f;
+    kf->Qx[0] = Q_ANGLE;
+    kf->Qx[1] = Q_BIAS;
+    kf->Rx = R_MEASURE;
+    kf->Px[0][0] = 1.0f;
+    kf->Px[0][1] = 1.0f;
+    kf->Px[1][0] = 1.0f;
+    kf->Px[1][1] = 1.0f;
+    kf->Kx[0] = 0.0f;
+    kf->Kx[1] = 0.0f;
 
-    ekf->Qy[0] = Q_ANGLE;
-    ekf->Qy[1] = Q_BIAS;
-    ekf->Ry = R_MEASURE;
-    ekf->Py[0][0] = 1.0f;
-    ekf->Py[0][1] = 1.0f;
-    ekf->Py[1][0] = 1.0f;
-    ekf->Py[1][1] = 1.0f;
-    ekf->Ky[0] = 0.0f;
-    ekf->Ky[1] = 0.0f;
+    kf->Qy[0] = Q_ANGLE;
+    kf->Qy[1] = Q_BIAS;
+    kf->Ry = R_MEASURE;
+    kf->Py[0][0] = 1.0f;
+    kf->Py[0][1] = 1.0f;
+    kf->Py[1][0] = 1.0f;
+    kf->Py[1][1] = 1.0f;
+    kf->Ky[0] = 0.0f;
+    kf->Ky[1] = 0.0f;
 }
 
-void kalman_filter(State *ds, EKF *ekf, float dt) 
+void kalman_filter(State *ds, KF *kf, float dt) 
 {    
     // A priori state estimate
-    ds->w[0] -= ekf->bias[0]; 
-    ds->w[1] -= ekf->bias[1]; 
+    ds->w[0] -= kf->bias[0]; 
+    ds->w[1] -= kf->bias[1]; 
     ds->k_angle[0] += ds->w[0] * dt; 
     ds->k_angle[1] += ds->w[1] * dt; 
 
     // A priori error covariance matrix estimate
-    ekf->Px[0][0] += dt * (dt*ekf->Px[1][1] - ekf->Px[0][1] - ekf->Px[1][0] + ekf->Qx[0]);
-    ekf->Px[0][1] -= dt * ekf->Px[1][1];
-    ekf->Px[1][0] -= dt * ekf->Px[1][1];
-    ekf->Px[1][1] += dt * ekf->Qx[1];
+    kf->Px[0][0] += dt * (dt*kf->Px[1][1] - kf->Px[0][1] - kf->Px[1][0] + kf->Qx[0]);
+    kf->Px[0][1] -= dt * kf->Px[1][1];
+    kf->Px[1][0] -= dt * kf->Px[1][1];
+    kf->Px[1][1] += dt * kf->Qx[1];
 
-    ekf->Py[0][0] += dt * (dt*ekf->Py[1][1] - ekf->Py[0][1] - ekf->Py[1][0] + ekf->Qy[0]);
-    ekf->Py[0][1] -= dt * ekf->Py[1][1];
-    ekf->Py[1][0] -= dt * ekf->Py[1][1];
-    ekf->Py[1][1] += dt * ekf->Qy[1];
+    kf->Py[0][0] += dt * (dt*kf->Py[1][1] - kf->Py[0][1] - kf->Py[1][0] + kf->Qy[0]);
+    kf->Py[0][1] -= dt * kf->Py[1][1];
+    kf->Py[1][0] -= dt * kf->Py[1][1];
+    kf->Py[1][1] += dt * kf->Qy[1];
 
     // Innovation
     float y[2] = {0.0f};
@@ -55,38 +55,37 @@ void kalman_filter(State *ds, EKF *ekf, float dt)
     y[1] = ds->m_angle[1] - ds->k_angle[1];
 
     // Innovation covariance
-    float Sx = ekf->Px[0][0] + ekf->Rx;
-    float Sy = ekf->Py[0][0] + ekf->Ry;
+    float Sx = kf->Px[0][0] + kf->Rx;
+    float Sy = kf->Py[0][0] + kf->Ry;
     
-
     // Kalman Gain
-    ekf->Kx[0] = ekf->Px[0][0] / Sx;
-    ekf->Kx[1] = ekf->Px[1][0] / Sx;
+    kf->Kx[0] = kf->Px[0][0] / Sx;
+    kf->Kx[1] = kf->Px[1][0] / Sx;
 
-    ekf->Ky[0] = ekf->Py[0][0] / Sy;
-    ekf->Ky[1] = ekf->Py[1][0] / Sy;
+    kf->Ky[0] = kf->Py[0][0] / Sy;
+    kf->Ky[1] = kf->Py[1][0] / Sy;
 
     // A posteriori state estimate
-    ds->k_angle[0] += ekf->Kx[0] * y[0];
-    ds->k_angle[1] += ekf->Ky[0] * y[1];
+    ds->k_angle[0] += kf->Kx[0] * y[0];
+    ds->k_angle[1] += kf->Ky[0] * y[1];
 
-    ekf->bias[0] += ekf->Kx[1] * y[0];
-    ekf->bias[1] += ekf->Ky[1] * y[1];
+    kf->bias[0] += kf->Kx[1] * y[0];
+    kf->bias[1] += kf->Ky[1] * y[1];
 
     // A posteriori error covariance matrix estimate
-    float P00_temp = ekf->Px[0][0];
-    float P01_temp = ekf->Px[0][1];    
-    ekf->Px[0][0] -= ekf->Kx[0] * P00_temp;
-    ekf->Px[0][1] -= ekf->Kx[0] * P01_temp;
-    ekf->Px[1][0] -= ekf->Kx[1] * P00_temp;
-    ekf->Px[1][1] -= ekf->Kx[1] * P01_temp;
+    float P00_temp = kf->Px[0][0];
+    float P01_temp = kf->Px[0][1];    
+    kf->Px[0][0] -= kf->Kx[0] * P00_temp;
+    kf->Px[0][1] -= kf->Kx[0] * P01_temp;
+    kf->Px[1][0] -= kf->Kx[1] * P00_temp;
+    kf->Px[1][1] -= kf->Kx[1] * P01_temp;
 
-    P00_temp = ekf->Py[0][0];
-    P01_temp = ekf->Py[0][1];    
-    ekf->Py[0][0] -= ekf->Ky[0] * P00_temp;
-    ekf->Py[0][1] -= ekf->Ky[0] * P01_temp;
-    ekf->Py[1][0] -= ekf->Ky[1] * P00_temp;
-    ekf->Py[1][1] -= ekf->Ky[1] * P01_temp;
+    P00_temp = kf->Py[0][0];
+    P01_temp = kf->Py[0][1];    
+    kf->Py[0][0] -= kf->Ky[0] * P00_temp;
+    kf->Py[0][1] -= kf->Ky[0] * P01_temp;
+    kf->Py[1][0] -= kf->Ky[1] * P00_temp;
+    kf->Py[1][1] -= kf->Ky[1] * P01_temp;
 }
 
 

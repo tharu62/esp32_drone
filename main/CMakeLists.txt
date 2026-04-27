@@ -1,3 +1,22 @@
-idf_component_register(SRCS "main.c" "angle_controller.c" "filter.c" "motor_controller.c" "mpu6050.c" "state.c" "input_receiver.c"
-                       INCLUDE_DIRS "C:/Users/Deshan/Documents/Code/ESP_idf/esp32_drone/include"
-                       PRIV_REQUIRES esp_driver_i2c esp_driver_gpio esp_driver_mcpwm esp_timer esp_wifi nvs_flash esp_driver_ledc)
+idf_component_register(
+    SRCS 
+        "main.c"
+        "angle_controller.c"
+        "filter.c"
+        "motor_controller_mcpwm.c"
+        "motor_controller.c"
+        "mpu6050.c"
+        "state.c"
+        "input_receiver.c"
+    INCLUDE_DIRS 
+        "C:/Users/Deshan/Documents/Code/Esp32/esp32_drone/include"
+    REQUIRES 
+        driver
+        esp_driver_mcpwm
+        esp_driver_ledc
+        esp_driver_i2c
+        esp_driver_gpio
+        esp_timer
+        esp_wifi
+        nvs_flash
+)
