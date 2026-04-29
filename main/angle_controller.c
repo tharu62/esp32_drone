@@ -82,9 +82,9 @@ void pid_angle_to_rate(State* s, float dt)
     s->pid_output[1] = pitch_output;
 }
 
-#define KP 0.05f  // bigger KP => more aggressive response, but more overshoot and potential instability. 
+#define KP 0.05f // bigger KP => more aggressive response, but more overshoot and potential instability. 
 #define KI 0.5f  // bigger KI => faster response, but more overshoot and potential instability.
-#define KD 0.01f  // bigger KD => more damping, less overshoot, but slower response.
+#define KD 0.1f  // bigger KD => more damping, less overshoot, but slower response.
 
 #define ANGLE_DEADBAND 1.0f  // degrees, skip PID if error smaller than this
 
