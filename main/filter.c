@@ -1,7 +1,7 @@
 #include "filter.h"
 
 #define Q_ANGLE 0.001f
-#define Q_BIAS 0.1f
+#define Q_BIAS 0.03f
 #define R_MEASURE 1.0f
 
 void init_kf(KF* kf)
@@ -89,14 +89,13 @@ void kalman_filter(State *ds, KF *kf, float dt)
 }
 
 
-#define STANDARD_DEV_ACCEL_NOISE_SQRD 3.0f // Standard deviation squared of a noise (deg) 
-#define STANDARD_DEV_GYRO_NOISE_SQRD 3.0f  // Standard deviation squared of gyro noise (deg/s)
+#define STANDARD_DEV_ACCEL_NOISE_SQRD 8.0f // Standard deviation squared of a noise (deg) 
+#define STANDARD_DEV_GYRO_NOISE_SQRD 16.0f  // Standard deviation squared of gyro noise (deg/s)
 
 float k_uncertainty = {0.0f}; // Initial estimation uncertainty for roll and pitch
 float k_gain = {0.0f};        // Kalman gain for roll and pitch angles
 
-// UNUSED: simple complementary filter with Kalman gain logic (not a true Kalman filter implementation, but a simplified version for angle estimation)
-inline void complementary_filter(State *ds, float dt) { 
+void complementary_filter(State *ds, float dt) { 
     
     // Prediction step: integrate gyro angles to get angle estimates
     ds->k_angle[0] += ds->w[0] * dt;

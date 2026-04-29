@@ -12,12 +12,3 @@ void init_state(State *state)
         state->pid_output[i] = 0.0f;
     }
 }
-
-void update_state(State *state, float angle_roll, float angle_pitch, float gyro_roll, float gyro_pitch) 
-{
-    // Simple state update logic (to be replaced with actual Kalman filter logic)
-    state->m_angle[0] = angle_roll;
-    state->m_angle[1] = angle_pitch;
-    state->w[0] = gyro_roll;
-    state->w[1] = gyro_pitch;
-}

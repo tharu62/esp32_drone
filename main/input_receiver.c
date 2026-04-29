@@ -38,10 +38,11 @@ void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     // Debug log for received control inputs 
     // ESP_LOGI(
     //     DRONE_TAG,
-    //     "Received control packet: T=%.2f R=%.2f P=%.2f",
+    //     "Received control packet: T=%.2f R=%.2f P=%.2f Y=%.2f",
     //     throttle,
     //     roll,
-    //     pitch
+    //     pitch,
+    //     yaw
     // );
 }
 
@@ -89,5 +90,5 @@ void get_control_inputs(State *drone_state)
     drone_state->throttle = throttle;
     drone_state->d_angle[0] = roll;
     drone_state->d_angle[1] = pitch;
-    // *drone_state->d_angle[2] = yaw; // unused for now
+    drone_state->d_angle[2] = yaw; 
 }

@@ -39,10 +39,9 @@ void app_main(void)
     State drone_state;
     init_state(&drone_state);
     
-    KF kf;
-    init_kf(&kf);
+    KF kf; // to check if needed
+    init_kf(&kf); // to check if needed
 
-    pid_init();
     mpu6050_setup(dev_handle);
 
     // blocking function waiting
@@ -52,7 +51,9 @@ void app_main(void)
     
     mpu6050_calibrate(dev_handle, &kf); 
     motor_controller_init();
-    
+    // Delay to allow user to prepare for takeoff after calibration and
+    // to ensure stable esc arming before starting the control loop
+    vTaskDelay((5000) / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "Drone ON.");
     
     // Time step for control loop in microseconds (5 us = 0.005 ms => 200 kHz control loop)
@@ -72,23 +73,23 @@ void app_main(void)
             dt_sec = (float)(t_end - t_start) / 1000000.0f; 
             t_start = esp_timer_get_time();
 
-            // Read sensor data from MPU6050 and update drone state
+            // Read sensor data from MPU6050 and update drone state (no filtering)
             mpu6050_update(dev_handle, bus_handle, &drone_state, dt_sec);
 
-            // Run Kalman filter to update state estimation
+            // Run Filter to update state estimation
             kalman_filter(&drone_state, &kf, dt_sec); 
             // complementary_filter(&drone_state, dt_sec); 
 
-            //@todo : enable yaw.
             // Read Input from user (desired angles and throttle)
             get_control_inputs(&drone_state);
 
-            // Exit loop if throttle is negative (used as a signal to stop)
+            // Exit loop if throttle is negative (used as a signal to stop the drone)
             if (drone_state.throttle < 0.0f) break; 
 
             //@todo : calibration.
-            // Run angle controller pid to get desired rotation rates
-            pid(&drone_state, dt_sec);
+            // Run angle controller pid to get proper motor input
+            pid_angle(&drone_state, dt_sec);
+            // pid_angle_to_rate(&drone_state, dt_sec);
 
             // Update motor speeds by pwm signals 
             motor_controller(&drone_state);
@@ -103,7 +104,6 @@ void app_main(void)
         // vTaskDelay((500) / portTICK_PERIOD_MS); // Delay to maintain loop timing
 #endif
     }
-    // ***********************************************
 
     // Cleanup
     motor_off();

@@ -21,10 +21,28 @@ typedef struct {
     float Ky[2];    // Kalman Gain
 } KF;
 
-void init_kf(KF *ekf);
+/**
+ * @brief Initializes the Kalman Filter struct with correct covariances and uncertainties.
+ * @param kf kalman filter struct
+ */
+void init_kf(KF *kf);
  
+/**
+ * @brief Implements the Kalman Filter algorithm using the corrent state of the drone
+ * and the Kalman Filter struct status to predict and correct the current status of the 
+ * drone (roll and pitch angle)
+ * @param ds drone state
+ * @param kf Kalman Filter struct
+ * @param dt time step
+ */
 void kalman_filter(State* ds, KF* kf, float dt);
 
-// void complementary_filter(State *ds, float dt);
+/**
+ * @brief Implements a complementary filter that uses a Kalman FIlter style statistic 
+ * method to reduce noise on measurement of the current status of the drone (roll and pith angle)
+ * @param ds drone state
+ * @param dt time step
+ */
+void complementary_filter(State *ds, float dt);
 
 #endif // KALMAN_FILTER_H

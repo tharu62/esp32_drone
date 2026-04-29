@@ -8,9 +8,9 @@
 #define ESC_MAX_US 2000
 
 #define PWM_GPIO_M1 1
-#define PWM_GPIO_M2 4
-#define PWM_GPIO_M3 38
-#define PWM_GPIO_M4 3
+#define PWM_GPIO_M2 3
+#define PWM_GPIO_M3 4
+#define PWM_GPIO_M4 38
 
 static const int motor_gpio[MOTOR_COUNT] = {
     PWM_GPIO_M1,
@@ -97,16 +97,16 @@ void motor_controller(State *ds)
 {
     float M[4];
 
-    float roll  = ds->pid_output[0];
-    float pitch = ds->pid_output[1];
+    float roll  = ds->pid_output[1];
+    float pitch = ds->pid_output[0];
     float yaw   = ds->pid_output[2];
     float throttle = ds->throttle;
 
     // motors with full pid controll
-    M[0] = throttle + roll + pitch - yaw;
-    M[1] = throttle - roll + pitch + yaw;
-    M[2] = throttle - roll - pitch + yaw;
-    M[3] = throttle + roll - pitch + yaw;
+    M[0] = throttle - roll + pitch; // + yaw;
+    M[1] = throttle + roll - pitch; // + yaw;
+    M[2] = throttle + roll + pitch; // - yaw;
+    M[3] = throttle - roll - pitch; // - yaw;
 
     // TEST MODE with throttle control only
     // M[0] = throttle;
@@ -114,42 +114,10 @@ void motor_controller(State *ds)
     // M[2] = throttle;
     // M[3] = throttle;
 
-    // stabilization steps, not working properly for now.
-    /*******************************************************/
-    // float max = M[0];
-    // float min = M[0];
-    // for (int i = 1; i < 4; i++) {
-    //     if (M[i] > max) max = M[i];
-    //     if (M[i] < min) min = M[i];
-    // }
-
-    // float range_above = max - 1.0f;
-    // float range_below = 0.0f - min;
-
-    // float correction = 0.0f;
-
-    // if (range_above > 0.0f) {
-    //     correction = range_above;
-    // } else if (range_below > 0.0f) {
-    //     correction = -range_below;
-    // }
-
-    // if (correction != 0.0f) {
-    //     roll  -= correction * 0.25f;
-    //     pitch -= correction * 0.25f;
-    //     yaw   -= correction * 0.25f;
-
-    //     M[0] = throttle + roll + pitch - yaw;
-    //     M[1] = throttle - roll + pitch + yaw;
-    //     M[2] = throttle - roll - pitch + yaw;
-    //     M[3] = throttle + roll - pitch + yaw;
-    // }
-    /************************************************/
-
     // Update all motors
     for (int i = 0; i < MOTOR_COUNT; i++) {
 
-        M[i] = clampf(M[i], 0.0f, 1.0f);
+        M[i] = clampf(M[i], 0.0f, 0.99f);
 
         uint32_t pulse_us = ESC_MIN_US + (uint32_t)(M[i] * (ESC_MAX_US - ESC_MIN_US));
 

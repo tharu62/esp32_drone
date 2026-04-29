@@ -1,16 +1,17 @@
 #include "angle_controller.h"
 
 // Rate PID (inner loop)
-#define RATE_KP_ROLL    0.08f
-#define RATE_KI_ROLL    0.04f
-#define RATE_KD_ROLL    0.002f
+#define RATE_KP_ROLL    0.05f
+#define RATE_KI_ROLL    0.5f
+#define RATE_KD_ROLL    0.05f
 
-#define RATE_KP_PITCH   0.08f
-#define RATE_KI_PITCH   0.04f
-#define RATE_KD_PITCH   0.002f
+#define RATE_KP_PITCH   0.05f
+#define RATE_KI_PITCH   0.5f
+#define RATE_KD_PITCH   0.05f
 
-#define MAX_RATE        5.0f
-#define K               0.1f               
+#define MAX_RATE        3.0f
+#define K               0.3f         
+
 #define I_LIMIT         0.5f
 #define OUTPUT_LIMIT    1.0f
 
@@ -41,13 +42,8 @@ inline float GAIN(float error) {
     return MAX_RATE * tanhf(K * error);
 }
 
-void pid_init(void)
-{
-    roll_rate_integral = 0.0f;
-    pitch_rate_integral = 0.0f;
-}
 
-void pid(State* s, float dt)
+void pid_angle_to_rate(State* s, float dt)
 {
     // new angle error 
     float roll_error  = s->d_angle[0] - s->k_angle[0];
@@ -84,4 +80,49 @@ void pid(State* s, float dt)
     // update the state with the PID outputs for roll and pitch
     s->pid_output[0] = roll_output;
     s->pid_output[1] = pitch_output;
+}
+
+#define KP 0.1f  // bigger KP => more aggressive response, but more overshoot and potential instability. 
+#define KI 0.5f  // bigger KI => faster response, but more overshoot and potential instability.
+#define KD 0.01f  // bigger KD => more damping, less overshoot, but slower response.
+
+static float roll_integral = 0.0f;
+static float pitch_integral = 0.0f;
+
+static float last_roll_error = 0.0f;
+static float last_pitch_error = 0.0f;
+
+void pid_angle(State* s, float dt)
+{
+    // new angle error. 
+    float roll_error  = s->d_angle[0] - s->k_angle[0];
+    float pitch_error = s->d_angle[1] - s->k_angle[1];
+
+    // integrate angle error.
+    roll_integral  += roll_error;
+    pitch_integral += pitch_error;
+
+    // integration limits to prevent excessive control signals [-I_LIMIT, I_LIMIT] degree.
+    clamp_I(&roll_integral);
+    clamp_I(&pitch_integral);
+
+    // derivative
+    float roll_derivative  = (last_roll_error - roll_error) / dt;
+    float pitch_derivative = (last_pitch_error - pitch_error) / dt;
+
+    // upate PID outputs for roll and pitch
+    float roll_output = KP * roll_error + KI * roll_integral + KD * roll_derivative;
+    float pitch_output = KP * pitch_error + KI * pitch_integral + KD * pitch_derivative;
+
+    // output limits to prevent excessive control signals [-OUTPUT_LIMIT, OUTPUT_LIMIT] degree.
+    clamp(&roll_output);
+    clamp(&pitch_output);
+
+    // update the state with the PID outputs for roll and pitch.
+    s->pid_output[0] = roll_output;
+    s->pid_output[1] = pitch_output;
+
+    // update last roll and pitch error.
+    last_roll_error = roll_error;
+    last_pitch_error = pitch_error;
 }

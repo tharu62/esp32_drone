@@ -13,17 +13,22 @@
 /**
  * @brief Callback function to handle received ESP-NOW packets containing 
  *        control inputs (throttle, roll, pitch).
+ * @param esp_now_info log receiver 
+ * @param data array that will store the data read from the callback.
+ * @param data_len lenght of the data array.(unused)
  */
 void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int data_len);
 
 /**
  * @brief Initializes ESP-NOW for receiving control inputs.
- *        Sets up Wi-Fi in station mode with a fixed MAC address and registers the receive callback.
+ *        Sets up Wi-Fi in station mode with a fixed MAC address 
+ *        and registers the receive callback.
  */
 void init_espnow();
 
 /**
- * @brief Retrieves the latest control inputs received via ESP-NOW.
+ * @brief Retrieves the latest control inputs received via ESP-NOW and update the drone state.
+ * @param drone_state drone state (roll, pitch and yaw angle and throttle).
  */
 void get_control_inputs(State *drone_state);
 

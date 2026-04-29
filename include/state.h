@@ -13,6 +13,4 @@ typedef struct {
 
 void init_state(State *state);
 
-void update_state(State *state, float angle_roll, float angle_pitch, float gyro_roll, float gyro_pitch);
-
 #endif // STATE_H
