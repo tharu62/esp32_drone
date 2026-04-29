@@ -86,7 +86,7 @@ void pid_angle_to_rate(State* s, float dt)
 #define KI 0.5f  // bigger KI => faster response, but more overshoot and potential instability.
 #define KD 0.01f  // bigger KD => more damping, less overshoot, but slower response.
 
-#define ANGLE_DEADBAND 1.5f  // degrees, skip PID if error smaller than this
+#define ANGLE_DEADBAND 1.0f  // degrees, skip PID if error smaller than this
 
 static float roll_integral = 0.0f;
 static float pitch_integral = 0.0f;
