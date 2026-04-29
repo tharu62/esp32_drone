@@ -56,8 +56,8 @@ void app_main(void)
     vTaskDelay((5000) / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "Drone ON.");
     
-    // Time step for control loop in microseconds (5 us = 0.005 ms => 200 kHz control loop)
-    const int64_t dt = 5; 
+    // Time step for control loop in microseconds (2000 us = 2 ms => 500 Hz control loop)
+    const int64_t dt = 2000; 
     float dt_sec = 0.0f;
     int64_t t_start, t_end = 0.0f;
     t_start = esp_timer_get_time(); // Get current time in microseconds
@@ -93,7 +93,6 @@ void app_main(void)
 
             // Update motor speeds by pwm signals 
             motor_controller(&drone_state);
-        }
 #endif
     
 #ifdef DEBUG        
@@ -103,6 +102,7 @@ void app_main(void)
         // printf("looping...\n");
         // vTaskDelay((500) / portTICK_PERIOD_MS); // Delay to maintain loop timing
 #endif
+        }
     }
 
     // Cleanup

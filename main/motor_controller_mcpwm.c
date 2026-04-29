@@ -97,16 +97,16 @@ void motor_controller(State *ds)
 {
     float M[4];
 
-    float roll  = ds->pid_output[1];
-    float pitch = ds->pid_output[0];
+    float roll  = ds->pid_output[0];
+    float pitch = ds->pid_output[1];
     float yaw   = ds->pid_output[2];
     float throttle = ds->throttle;
 
     // motors with full pid controll
-    M[0] = throttle - roll + pitch; // + yaw;
-    M[1] = throttle + roll - pitch; // + yaw;
-    M[2] = throttle + roll + pitch; // - yaw;
-    M[3] = throttle - roll - pitch; // - yaw;
+    M[0] = throttle - roll + pitch + yaw;
+    M[1] = throttle + roll - pitch + yaw;
+    M[2] = throttle + roll + pitch - yaw;
+    M[3] = throttle - roll - pitch - yaw;
 
     // TEST MODE with throttle control only
     // M[0] = throttle;

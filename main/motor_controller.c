@@ -94,10 +94,10 @@ void motor_controller(State *ds)
     // M[2] = throttle - roll - pitch + yaw;
     // M[3] = throttle + roll - pitch + yaw;
 
-    M[0] = throttle;
-    M[1] = throttle;
-    M[2] = throttle;
-    M[3] = throttle;
+    M[0] = throttle + pitch + roll - yaw;
+    M[1] = throttle - pitch + roll + yaw;
+    M[2] = throttle - pitch - roll + yaw;
+    M[3] = throttle + pitch - roll - yaw;
 
     float max = M[0];
     float min = M[0];

@@ -82,9 +82,11 @@ void pid_angle_to_rate(State* s, float dt)
     s->pid_output[1] = pitch_output;
 }
 
-#define KP 0.1f  // bigger KP => more aggressive response, but more overshoot and potential instability. 
+#define KP 0.05f  // bigger KP => more aggressive response, but more overshoot and potential instability. 
 #define KI 0.5f  // bigger KI => faster response, but more overshoot and potential instability.
 #define KD 0.01f  // bigger KD => more damping, less overshoot, but slower response.
+
+#define ANGLE_DEADBAND 1.5f  // degrees, skip PID if error smaller than this
 
 static float roll_integral = 0.0f;
 static float pitch_integral = 0.0f;
@@ -98,6 +100,16 @@ void pid_angle(State* s, float dt)
     float roll_error  = s->d_angle[0] - s->k_angle[0];
     float pitch_error = s->d_angle[1] - s->k_angle[1];
 
+    if(fabsf(roll_error) < ANGLE_DEADBAND) {
+        roll_error = 0.0f;
+        roll_integral = 0.0f;  
+    }
+
+    if(fabsf(pitch_error) < ANGLE_DEADBAND) {
+        pitch_error = 0.0f;
+        pitch_integral = 0.0f;
+    }
+
     // integrate angle error.
     roll_integral  += roll_error;
     pitch_integral += pitch_error;
@@ -107,8 +119,8 @@ void pid_angle(State* s, float dt)
     clamp_I(&pitch_integral);
 
     // derivative
-    float roll_derivative  = (last_roll_error - roll_error) / dt;
-    float pitch_derivative = (last_pitch_error - pitch_error) / dt;
+    float roll_derivative  = (roll_error - last_roll_error) / dt;
+    float pitch_derivative = (pitch_error - last_pitch_error) / dt;
 
     // upate PID outputs for roll and pitch
     float roll_output = KP * roll_error + KI * roll_integral + KD * roll_derivative;

@@ -80,8 +80,8 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, KF* ekf)
 
     for (int i = 0; i < 1000; i++) {
         ESP_ERROR_CHECK(mpu6050_register_read(dev, MPU6050_ACCEL_REG_ADDR, data, 6));
-        int16_t ax = (data[0] << 8) | data[1];
-        int16_t ay = (data[2] << 8) | data[3];
+        int16_t ay = (data[0] << 8) | data[1];
+        int16_t ax = (data[2] << 8) | data[3];
         int16_t az = (data[4] << 8) | data[5];
 
         ax_offset += (float)ax; 
@@ -89,8 +89,8 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, KF* ekf)
         az_offset += (float)az;
         
         ESP_ERROR_CHECK(mpu6050_register_read(dev, MPU6050_GYRO_REG_ADDR, data, 6));
-        int16_t gx = (data[0] << 8) | data[1];
-        int16_t gy = (data[2] << 8) | data[3];
+        int16_t gy = (data[0] << 8) | data[1];
+        int16_t gx = (data[2] << 8) | data[3];
         // int16_t gz = (data[4] << 8) | data[5]; // unused
 
         gx_offset += (float)gx;
@@ -117,8 +117,8 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, St
         i2c_master_bus_reset(bus);
     }
 
-    int16_t ax = (data[0] << 8) | data[1];
-    int16_t ay = (data[2] << 8) | data[3];
+    int16_t ay = (data[0] << 8) | data[1];
+    int16_t ax = (data[2] << 8) | data[3];
     int16_t az = (data[4] << 8) | data[5];
 
     float xg = ((float)ax - ax_offset) / ACCELEROMETER_SENSITIVITY; 
@@ -134,15 +134,15 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, St
     state->a[1] = yg;
     state->a[2] = zg;
 
-    state->m_angle[0] = atan2f(yg, sqrtf(xg * xg + zg * zg)) * 180.0f / M_PI;
-    state->m_angle[1] = atan2f(-xg, sqrtf(yg * yg + zg * zg)) * 180.0f / M_PI;
+    state->m_angle[0] = atan2f(-yg, sqrtf(xg * xg + zg * zg)) * 180.0f / M_PI;
+    state->m_angle[1] = atan2f(xg, zg) * 180.0f / M_PI;
 
     while (mpu6050_register_read(dev, MPU6050_GYRO_REG_ADDR, data, 6) != ESP_OK) {
         i2c_master_bus_reset(bus);
     }
 
-    int16_t gx = (data[0] << 8) | data[1];
-    int16_t gy = (data[2] << 8) | data[3];
+    int16_t gy = (data[0] << 8) | data[1];
+    int16_t gx = (data[2] << 8) | data[3];
     // int16_t gz = (data[4] << 8) | data[5]; // unused
 
     state->w[0] = (float)gx / GYROSCOPE_SENSITIVITY;
