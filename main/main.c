@@ -51,8 +51,8 @@ void app_main(void)
     
     mpu6050_calibrate(dev_handle, &kf); 
     motor_controller_init();
-    // Delay to allow user to prepare for takeoff after calibration and
-    // to ensure stable esc arming before starting the control loop
+    // Delay of 5 seconds to allow user to prepare for takeoff after calibration and
+    // to ensure stable esc arming before starting the control loop.
     vTaskDelay((5000) / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "Drone ON.");
     
@@ -86,7 +86,6 @@ void app_main(void)
             // Exit loop if throttle is negative (used as a signal to stop the drone)
             if (drone_state.throttle < 0.0f) break; 
 
-            //@todo : calibration.
             // Run angle controller pid to get proper motor input
             pid_angle(&drone_state, dt_sec);
             // pid_angle_to_rate(&drone_state, dt_sec);
