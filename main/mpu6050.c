@@ -3,7 +3,7 @@
 #define I2C_MASTER_SCL_IO           GPIO_NUM_11
 #define I2C_MASTER_SDA_IO           GPIO_NUM_10
 #define I2C_MASTER_NUM              I2C_NUM_0
-#define I2C_MASTER_FREQ_HZ          400000 // 400 kHz
+#define I2C_MASTER_FREQ_HZ          800000 // 800 kHz
 #define I2C_MASTER_TIMEOUT_MS       1000 
 
 #define MPU6050_SENSOR_ADDR         0x68
@@ -102,18 +102,22 @@ void mpu6050_calibrate(i2c_master_dev_handle_t dev, KF* ekf)
 
     ax_offset = ax_offset / 1000.0f;
     ay_offset = ay_offset / 1000.0f;
-    az_offset = az_offset / 1000.0f - ACCELEROMETER_SENSITIVITY; // Subtract 1g from Z-axis offset
+    // Subtract 1g from Z-axis offset
+    az_offset = az_offset / 1000.0f - ACCELEROMETER_SENSITIVITY; 
     ekf->bias[0] = gx_offset / 1000.0f / GYROSCOPE_SENSITIVITY; 
     ekf->bias[1] = gy_offset / 1000.0f / GYROSCOPE_SENSITIVITY; 
     ESP_LOGI("MPU6050", "Calibration done");
 }
 
 
+#define ACCEL_SCALE (1.0f / ACCELEROMETER_SENSITIVITY)
+#define GYRO_SCALE  (1.0f / GYROSCOPE_SENSITIVITY)
+
 void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, State *state, float dt)
 {
+    uint8_t data[14];
 
-    uint8_t data[10] = {0};
-    while (mpu6050_register_read(dev, MPU6050_ACCEL_REG_ADDR, data, 6) != ESP_OK) {
+    while (mpu6050_register_read(dev, MPU6050_ACCEL_REG_ADDR, data, 14) != ESP_OK) {
         i2c_master_bus_reset(bus);
     }
 
@@ -121,30 +125,21 @@ void mpu6050_update(i2c_master_dev_handle_t dev, i2c_master_bus_handle_t bus, St
     int16_t ax = (data[2] << 8) | data[3];
     int16_t az = (data[4] << 8) | data[5];
 
-    float xg = ((float)ax - ax_offset) / ACCELEROMETER_SENSITIVITY; 
-    float yg = ((float)ay - ay_offset) / ACCELEROMETER_SENSITIVITY;
-    float zg = ((float)az - az_offset) / ACCELEROMETER_SENSITIVITY;
+    int16_t gy = (data[8] << 8) | data[9];
+    int16_t gx = (data[10] << 8) | data[11];
 
-    // Apply low-pass filter
-    // state->a[0] = ALPHA * state->a[0] + (1 - ALPHA) * xg;
-    // state->a[1] = ALPHA * state->a[1] + (1 - ALPHA) * yg;
-    // state->a[2] = ALPHA * state->a[2] + (1 - ALPHA) * zg;
-    
+    float xg = ((float)ax - ax_offset) * ACCEL_SCALE;
+    float yg = ((float)ay - ay_offset) * ACCEL_SCALE;
+    float zg = ((float)az - az_offset) * ACCEL_SCALE;
+
     state->a[0] = xg;
     state->a[1] = yg;
     state->a[2] = zg;
 
-    state->m_angle[0] = atan2f(-yg, sqrtf(xg * xg + zg * zg)) * 180.0f / M_PI;
-    state->m_angle[1] = atan2f(xg, zg) * 180.0f / M_PI;
+    state->m_angle[0] = atan2f(-yg, sqrtf(xg * xg + zg * zg)) * 57.29578f;
 
-    while (mpu6050_register_read(dev, MPU6050_GYRO_REG_ADDR, data, 6) != ESP_OK) {
-        i2c_master_bus_reset(bus);
-    }
+    state->m_angle[1] = atan2f(xg, zg) * 57.29578f;
 
-    int16_t gy = (data[0] << 8) | data[1];
-    int16_t gx = (data[2] << 8) | data[3];
-    // int16_t gz = (data[4] << 8) | data[5]; // unused
-
-    state->w[0] = (float)gx / GYROSCOPE_SENSITIVITY;
-    state->w[1] = (float)gy / GYROSCOPE_SENSITIVITY;
+    state->w[0] = (float)gx * GYRO_SCALE;
+    state->w[1] = (float)gy * GYRO_SCALE;
 }

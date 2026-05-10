@@ -38,9 +38,9 @@ void app_main(void)
 
     State drone_state;
     init_state(&drone_state);
-    
-    KF kf; // to check if needed
-    init_kf(&kf); // to check if needed
+    KF kf; 
+    init_kf(&kf);
+    motor_controller_init();
 
     mpu6050_setup(dev_handle);
 
@@ -50,28 +50,38 @@ void app_main(void)
     init_espnow();
     
     mpu6050_calibrate(dev_handle, &kf); 
-    motor_controller_init();
-    // Delay of 5 seconds to allow user to prepare for takeoff after calibration and
-    // to ensure stable esc arming before starting the control loop.
-    vTaskDelay((5000) / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "Drone ON.");
-    
-    // Time step for control loop in microseconds (2000 us = 2 ms => 500 Hz control loop)
-    const int64_t dt = 2000; 
-    float dt_sec = 0.0f;
-    int64_t t_start, t_end = 0.0f;
-    t_start = esp_timer_get_time(); // Get current time in microseconds
-    while (true) {
-#ifdef MAIN_LOOP        
 
-        // Get current time in microseconds at the start of the loop to calculate elapsed time
+    // Delay of 5 seconds to allow user 
+    // to prepare for takeoff after calibration 
+    // and to ensure stable esc arming before 
+    // starting the control loop.
+    vTaskDelay((3000) / portTICK_PERIOD_MS);
+    ESP_LOGI(TAG, "Drone ON.");
+
+#ifdef MAIN_LOOP
+
+    // Time step for control loop in microseconds (500 us = 0.5 ms => 2 kHz control loop)
+    const int64_t dt = 500; 
+    float dt_sec = 0.0f;
+    int64_t t_start, t_end;
+    t_start = esp_timer_get_time(); // Get timestamp at control loop start
+    float dt_loop = 0; // Variable to track actual loop time for debugging
+    while (true) {
+        // Get current time in microseconds to check if dt has elapsed
         t_end = esp_timer_get_time();
 
         if ((t_end - t_start) >= dt) {
 
-            // Calculate elapsed time in seconds and reset start time for next loop iteration
-            dt_sec = (float)(t_end - t_start) / 1000000.0f; 
-            t_start = esp_timer_get_time();
+            // Calculate elapsed time in seconds for control algorithms
+            dt_sec = (float)dt / 1000000.0f;
+
+            // Keep fixed loop timing (prevents drift)
+            t_start += dt;
+
+        #ifdef DEBUG  
+            // Start execution timing
+            dt_loop = (float)esp_timer_get_time() / 1000000.0f;
+        #endif
 
             // Read sensor data from MPU6050 and update drone state (no filtering)
             mpu6050_update(dev_handle, bus_handle, &drone_state, dt_sec);
@@ -92,17 +102,33 @@ void app_main(void)
 
             // Update motor speeds by pwm signals 
             motor_controller(&drone_state);
-#endif
-    
-#ifdef DEBUG        
-        printf("%f,%f,%f\n", drone_state.k_angle[0], drone_state.k_angle[1], drone_state.k_angle[2]);
-        // printf("%f\n", drone_state.throttle);
-        // printf("%f\n", dt_sec);
-        // printf("looping...\n");
-        // vTaskDelay((500) / portTICK_PERIOD_MS); // Delay to maintain loop timing
-#endif
+
+            
+        #ifdef DEBUG        
+        
+            // Calculate actual loop execution time for debugging
+            dt_loop = (float)(esp_timer_get_time() / 1000000.0f) - dt_loop;
+            
+            // printf("%f,%f,%f\n", drone_state.k_angle[0], drone_state.k_angle[1], drone_state.k_angle[2]);
+            // printf("%f\n", drone_state.throttle);
+
+            // Print less frequently to avoid disturbing loop timing
+            static int debug_counter = 0;
+
+            if (++debug_counter >= 100) {
+                debug_counter = 0;
+
+                printf("dt_sec=%f\n", dt_sec);
+                printf("dt_loop=%f\n", dt_loop);
+            }
+
+            // printf("looping...\n");
+            // vTaskDelay((500) / portTICK_PERIOD_MS); // Delay to maintain loop timing
+        #endif
         }
     }
+
+#endif
 
     // Cleanup
     motor_off();

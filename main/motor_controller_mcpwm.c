@@ -7,16 +7,18 @@
 #define ESC_MIN_US 1000
 #define ESC_MAX_US 2000
 
-#define PWM_GPIO_M1 1
-#define PWM_GPIO_M2 3
-#define PWM_GPIO_M3 4
-#define PWM_GPIO_M4 38
+#define PWM_GPIO_M0 1
+#define PWM_GPIO_M1 3
+#define PWM_GPIO_M2 4
+#define PWM_GPIO_M3 38
+
+#define MINIMUM_THROTTLE 0.1f
 
 static const int motor_gpio[MOTOR_COUNT] = {
+    PWM_GPIO_M0,
     PWM_GPIO_M1,
     PWM_GPIO_M2,
-    PWM_GPIO_M3,
-    PWM_GPIO_M4
+    PWM_GPIO_M3
 };
 
 static mcpwm_cmpr_handle_t comparator[MOTOR_COUNT];
@@ -99,20 +101,30 @@ void motor_controller(State *ds)
 
     float roll  = ds->pid_output[0];
     float pitch = ds->pid_output[1];
-    float yaw   = ds->pid_output[2];
+    float yaw   = ds->d_angle[2];
     float throttle = ds->throttle;
 
-    // motors with full pid controll
-    M[0] = throttle - roll + pitch + yaw;
-    M[1] = throttle + roll - pitch + yaw;
-    M[2] = throttle + roll + pitch - yaw;
-    M[3] = throttle - roll - pitch - yaw;
+    if(throttle > MINIMUM_THROTTLE){
+        // motors with full pid controll
+        M[0] = throttle - roll + pitch + yaw;
+        M[1] = throttle + roll - pitch + yaw;
+        M[2] = throttle + roll + pitch - yaw;
+        M[3] = throttle - roll - pitch - yaw;
 
-    // TEST MODE with throttle control only
-    // M[0] = throttle;
-    // M[1] = throttle;
-    // M[2] = throttle;
-    // M[3] = throttle;
+        // TEST MODE with throttle control only
+        // M[0] = throttle;
+        // M[1] = throttle;
+        // M[2] = throttle;
+        // M[3] = throttle;
+
+    } else {
+        // If throttle is very low, set all motors to idle (minimum throttle) 
+        // to prevent motor stalling and ensure better control response when 
+        // throttle is increased again.
+        for (int i = 0; i < MOTOR_COUNT; i++) {
+            M[i] = 0.1f;
+        }
+    }
 
     // Update all motors
     for (int i = 0; i < MOTOR_COUNT; i++) {
@@ -121,13 +133,14 @@ void motor_controller(State *ds)
 
         uint32_t pulse_us = ESC_MIN_US + (uint32_t)(M[i] * (ESC_MAX_US - ESC_MIN_US));
 
-        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[i], pulse_us));
+        mcpwm_comparator_set_compare_value(comparator[i], pulse_us);
     }
+
 }
 
 void motor_off()
 {
     for (int i = 0; i < MOTOR_COUNT; i++) {
-        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator[i], ESC_MIN_US));
+        mcpwm_comparator_set_compare_value(comparator[i], ESC_MIN_US);
     }
 }
