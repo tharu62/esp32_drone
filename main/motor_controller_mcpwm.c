@@ -120,19 +120,16 @@ void motor_controller(State *ds)
     } else {
         // If throttle is very low, set all motors to idle (minimum throttle) 
         // to prevent motor stalling and ensure better control response when 
-        // throttle is increased again.
+        // throttle is increased aagain.
         for (int i = 0; i < MOTOR_COUNT; i++) {
-            M[i] = 0.1f;
+            M[i] = 0.f;
         }
     }
 
     // Update all motors
     for (int i = 0; i < MOTOR_COUNT; i++) {
-
-        M[i] = clampf(M[i], 0.0f, 0.99f);
-
+        M[i] = clampf(M[i], 0.0f, 1.0f);
         uint32_t pulse_us = ESC_MIN_US + (uint32_t)(M[i] * (ESC_MAX_US - ESC_MIN_US));
-
         mcpwm_comparator_set_compare_value(comparator[i], pulse_us);
     }
 

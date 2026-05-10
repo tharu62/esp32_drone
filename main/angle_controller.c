@@ -34,15 +34,9 @@ void pid_angle(State* s, float dt)
     float roll_derivative  = (roll_error  - last_roll_error)  * inv_dt;
     float pitch_derivative = (pitch_error - last_pitch_error) * inv_dt;
 
-    float roll_output =
-        KP * roll_error +
-        KI * roll_integral +
-        KD * roll_derivative;
+    float roll_output = KP * roll_error + KI * roll_integral + KD * roll_derivative;
 
-    float pitch_output =
-        KP * pitch_error +
-        KI * pitch_integral +
-        KD * pitch_derivative;
+    float pitch_output = KP * pitch_error + KI * pitch_integral + KD * pitch_derivative;
 
     s->pid_output[0] = clamp_fast(roll_output, OUTPUT_LIMIT);
     s->pid_output[1] = clamp_fast(pitch_output, OUTPUT_LIMIT);
