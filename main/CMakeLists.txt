@@ -3,13 +3,15 @@ idf_component_register(
         "main.c"
         "angle_controller.c"
         "filter.c"
-        "motor_controller_mcpwm.c"
-        "motor_controller.c"
-        "mpu6050.c"
+        "motor/motor_controller_mcpwm.c"
+        "motor/motor_controller.c"
+        "sensors/mpu6050.c"
         "state.c"
         "input_receiver.c"
     INCLUDE_DIRS 
-        "C:/Users/Deshan/Documents/Code/Esp32/esp32_drone/include"
+        "/home/utonto/Documents/Code/Esp32/esp32_drone/include"
+        "/home/utonto/Documents/Code/Esp32/esp32_drone/include/sensors"
+        "/home/utonto/Documents/Code/Esp32/esp32_drone/include/motor"
     REQUIRES 
         driver
         esp_driver_mcpwm

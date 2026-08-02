@@ -1,7 +1,8 @@
 /* Simple Firmaware for ESP32 DRONE CONTROLLER
 
-   This code initializes the I2C bus and communicates with a MPU6050 sensor
-   to read accelerometer and gyroscope data in a loop. 
+   This code initializes the I2C bus and communicates 
+   with a imu sensor to read accelerometer and 
+   gyroscope data in a loop. 
    ...
 */
 #include <stdio.h>
@@ -18,6 +19,7 @@
 #include "angle_controller.h"
 // #include "motor_controller.h"
 #include "motor_controller_mcpwm.h"
+#include "bmi088.h"
 #include "mpu6050.h"
 #include "filter.h"
 

@@ -2,11 +2,13 @@
 #define MPU6050_H
 
 #include <math.h>
-#include "sdkconfig.h"
+
+// #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
-#include "esp_log.h"
 #include "driver/i2c_master.h"
 #include "esp_timer.h"
+#include "esp_log.h"
+
 #include "state.h"
 #include "filter.h"
 

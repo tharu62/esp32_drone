@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/main/**",
-                "${IDF_PATH}/components/**"
+                "${IDF_PATH}/components/**",
+                "/home/utonto/.espressif/v6.0.2/esp-idf/components/**"
             ],
             "defines": [
                 "ESP_PLATFORM"
