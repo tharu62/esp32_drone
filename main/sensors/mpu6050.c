@@ -21,6 +21,9 @@ static float az_offset = 0.0f;
 static float gx_offset = 0.0f;
 static float gy_offset = 0.0f;
 
+// static i2c_master_dev_handle_t dev;
+// static i2c_master_bus_handle_t bus;
+
 
 esp_err_t mpu6050_register_read(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t *data, size_t len)
 {

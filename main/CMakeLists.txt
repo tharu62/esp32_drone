@@ -6,6 +6,7 @@ idf_component_register(
         "motor/motor_controller_mcpwm.c"
         "motor/motor_controller.c"
         "sensors/mpu6050.c"
+        "sensors/bmi088.c"
         "state.c"
         "input_receiver.c"
     INCLUDE_DIRS 
@@ -17,6 +18,7 @@ idf_component_register(
         esp_driver_mcpwm
         esp_driver_ledc
         esp_driver_i2c
+        esp_driver_spi
         esp_driver_gpio
         esp_timer
         esp_wifi
